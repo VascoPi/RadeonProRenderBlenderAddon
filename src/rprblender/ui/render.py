@@ -175,6 +175,8 @@ class RPR_RENDER_PT_viewport_limits(RPR_Panel):
 
         col.prop(rpr, 'viewport_denoiser')
         col.prop(rpr, 'viewport_upscale')
+        col.prop(rpr, 'denoiser_type')
+        col.prop(rpr, 'restir_gi')
 
         col.separator()
         col.prop(limits, 'preview_samples')

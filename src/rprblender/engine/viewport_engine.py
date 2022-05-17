@@ -509,6 +509,10 @@ class ViewportEngine(Engine):
         rpr_camera.set_name("Camera")
         self.rpr_context.scene.set_camera(rpr_camera)
 
+        if scene.rpr.render_quality == "HYBRIDPRO":
+            param = getattr(pyrpr, f"RPR_DENOISER_{scene.rpr.denoiser_type}")
+            self.rpr_context.set_parameter(pyrpr.CONTEXT_PT_DENOISER, param)
+
         # image filter
         self.setup_image_filter(self._get_image_filter_settings(scene))
 

@@ -530,6 +530,23 @@ class RPR_RenderProperties(RPR_Properties):
         default=True,
     )
 
+    denoiser_type: EnumProperty(
+        name="Denoiser Type",
+        description="",
+        items=(
+            ('NONE', "None", "w"),
+            ('SVGF', "SVGF", "w"),
+            ('ASVGF', "ASVGF", "w"),
+        ),
+        default='NONE',
+    )
+
+    restir_gi: BoolProperty(
+        name="Restir GI",
+        description="",
+        default=True,
+    )
+
     def init_rpr_context(self, rpr_context, is_final_engine=True, use_gl_interop=False, use_contour_integrator=False):
         """ Initializes rpr_context by device settings """
 
@@ -648,6 +665,14 @@ class RPR_RenderProperties(RPR_Properties):
         res = False
         res |= rpr_context.set_parameter(pyrpr.CONTEXT_IMAGE_FILTER_TYPE, filter_type)
         res |= rpr_context.set_parameter(filter_radius, self.pixel_filter_width)
+        return res
+
+    def export_denoiser_type(self, rpr_context):
+        """ Exports pixel filter settings """
+        denoiser_type = getattr(pyrpr, f"FILTER_{self.denoiser_type}")
+
+        res = False
+        res |= rpr_context.set_parameter(pyrpr.CONTEXT_IMAGE_FILTER_TYPE, denoiser_type)
         return res
 
     def export_render_quality(self, rpr_context):
