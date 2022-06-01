@@ -687,7 +687,7 @@ class ShaderNodeTexImage(NodeParser):
             else:
                 frame_current = min(frame_current - frame_start + frame_offset + 1, frame_finish)
 
-        rpr_image = image.sync(self.rpr_context, self.node.image, frame_number=frame_current)
+        rpr_image = image.sync(self.rpr_context, self.node.image, frame_number=frame_current, user=self.node.image_user)
         if not rpr_image:
             return None
 

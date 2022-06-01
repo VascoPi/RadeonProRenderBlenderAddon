@@ -52,7 +52,7 @@ def key(image: bpy.types.Image, color_space, frame_number=None, UDIM_tile=0):
     return (image.name, color_space)
 
 
-def sync(rpr_context, image: bpy.types.Image, use_color_space=None, frame_number=None):
+def sync(rpr_context, image: bpy.types.Image, use_color_space=None, frame_number=None, user=None):
     """ Creates pyrpr.Image from bpy.types.Image """
     from rprblender.engine.export_engine import ExportEngine
 
@@ -93,7 +93,8 @@ def sync(rpr_context, image: bpy.types.Image, use_color_space=None, frame_number
 
     pixels = image.pixels
     if image.source == 'SEQUENCE':
-        file_path = get_sequence_frame_file_path(image.filepath_from_user(), frame_number)
+        user.frame_current = frame_number
+        file_path = image.filepath_from_user(image_user=user)
         if not file_path:
             return None
         rpr_image = rpr_context.create_image_file(image_key, file_path)
