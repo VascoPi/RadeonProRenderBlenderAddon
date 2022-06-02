@@ -20,7 +20,6 @@ import bpy
 
 import pyrpr
 from rprblender.utils import helper_lib
-from rprblender.utils import get_sequence_frame_file_path
 from rprblender.engine.context import RPRContext2
 
 from . import object, material, volume

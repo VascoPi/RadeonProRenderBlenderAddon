@@ -23,7 +23,6 @@ from rprblender import utils
 from rprblender.engine import context
 
 from rprblender.utils import logging
-from rprblender.utils import get_sequence_frame_file_path
 
 log = logging.Log(tag='export.image')
 
