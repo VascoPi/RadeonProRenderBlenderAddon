@@ -97,12 +97,16 @@ def create_grid_sampler_node(rpr_context, obj, grid_name, default_grid_name):
         if not helper_lib.is_openvdb_support:
             return None
 
+        obj.data.grids.load()
         vdb_file = obj.data.grids.frame_filepath
         if not vdb_file:  # nothing to export
             return None
 
         grids = helper_lib.vdb_read_grids_list(vdb_file)
         if grid_name not in grids:
+            return None
+
+        if obj.data.grids[grid_name].channels != 1:
             return None
 
         data = helper_lib.vdb_read_grid_data(vdb_file, grid_name)

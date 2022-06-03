@@ -2353,7 +2353,7 @@ class ShaderNodeVolumePrincipled(NodeParser):
                     emission_grid_node = density_grid_node
 
                 lookup_image = self.rpr_context.create_image_data(None,
-                    np.array([0.0, 0.0, 0.0, 1.0, 1.0, 1.0], dtype=np.float32).reshape(-1, 1, 3))
+                    np.array([1.0, 1.0, 1.0, 0.0, 0.0, 0.0], dtype=np.float32).reshape(-1, 1, 3))
                 emission_image_node = self.create_node(pyrpr.MATERIAL_NODE_IMAGE_TEXTURE, {
                     pyrpr.MATERIAL_INPUT_DATA: lookup_image,
                     pyrpr.MATERIAL_INPUT_UV: emission_grid_node,
