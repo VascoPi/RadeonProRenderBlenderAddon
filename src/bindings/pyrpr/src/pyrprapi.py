@@ -668,7 +668,7 @@ if __name__=='__main__':
                  'rprDirectionalLightSetRasterShadowSplits',
                  'RPR_CONTEXT_CREATE_MESH_EDITABLE_FUNC_NAME',
                  'rprContextCreateCompressedImage_func',
-                 #'rpr_compressed_format',
+                 'rpr_compressed_format',
                  'rpr_comressed_image_desc',
                  'RPR_CONTEXT_CREATE_COMPRESSED_IMAGE',
                  'rpr_framebuffer_type',
