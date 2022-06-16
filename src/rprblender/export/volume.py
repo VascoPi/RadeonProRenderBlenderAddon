@@ -110,11 +110,11 @@ def create_grid_sampler_node(rpr_context, obj, grid_name, default_grid_name):
         if grid_name not in grids:
             return None
 
-        # TODO: add support for float vector grid
-        obj.data.grids.load()
+        # TODO: add support for float vector grid)
         if obj.data.grids[grid_name].channels != 1:
-            obj.data.grids.unload()
             return None
+
+        obj.data.grids.unload()
 
         data = helper_lib.vdb_read_grid_data(vdb_file, grid_name)
         grid = rpr_context.create_grid_from_array_indices(*data['size'], data['values'], data['indices'])
