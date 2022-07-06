@@ -59,6 +59,7 @@ class RPRContext(context.RPRContext):
 
         # enable arithmetic operations on HybridPro
         self.set_parameter(pyrpr.CONTEXT_ENABLE_ARITHMETICS, True)
+        self.set_parameter(pyrpr.CONTEXT_ENABLE_VOLUMES, True)
 
     def resolve(self, aovs=None):
         pass

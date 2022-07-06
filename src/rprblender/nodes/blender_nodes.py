@@ -92,7 +92,7 @@ class ShaderNodeOutputMaterial(BaseNodeParser):
             # checking if we have connected node to Volume socket
             volume_rpr_node = material.sync(self.rpr_context, self.material, 'Volume')
             if volume_rpr_node:
-                if isinstance(self.rpr_context, (RPRContextHybrid, RPRContextHybridPro)):
+                if isinstance(self.rpr_context, RPRContextHybrid):
                     return self.create_node(pyrpr.MATERIAL_NODE_UBERV2, {
                         pyrpr.MATERIAL_INPUT_UBER_DIFFUSE_WEIGHT: 0.0,
                         pyrpr.MATERIAL_INPUT_UBER_TRANSPARENCY: (1.0, 1.0, 1.0),
@@ -2313,6 +2313,55 @@ class ShaderNodeVolumePrincipled(NodeParser):
 
     def export_hybrid(self):
         return None
+
+    def export_hybridpro(self):
+        def volume_export():
+            if not self.object:
+                return None
+
+            density_attr = self.get_input_default('Density Attribute')
+            density_grid_node = volume.create_grid_sampler_node(
+                self.rpr_context, self.object, density_attr.data, 'density')
+
+            if not density_grid_node:
+                if self.object.type == 'VOLUME' or volume.get_smoke_modifier(self.object):
+                    return self.create_node(pyrpr.MATERIAL_NODE_VOLUME, {pyrpr.MATERIAL_INPUT_DENSITY: 0.0})
+
+                return None
+
+            color = self.get_input_value('Color')
+            density = self.get_input_value('Density')
+
+            color *= 0.99   # making color slightly less, because of issue
+                            # that (1, 1, 1) color and higher disables emission
+
+            rpr_node = self.create_node(pyrpr.MATERIAL_NODE_VOLUME, {
+                pyrpr.MATERIAL_INPUT_DENSITY: density,
+                pyrpr.MATERIAL_INPUT_DENSITYGRID: density_grid_node,
+                pyrpr.MATERIAL_INPUT_COLOR: color,
+            })
+
+
+
+            return rpr_node
+
+        def base_export():
+            color = self.get_input_value('Color')
+            density = self.get_input_value('Density')
+
+            rpr_node = self.create_node(pyrpr.MATERIAL_NODE_VOLUME, {
+                pyrpr.MATERIAL_INPUT_COLOR: color,
+                pyrpr.MATERIAL_INPUT_DENSITY: density,
+            })
+
+            return rpr_node
+
+        rpr_node = volume_export()
+
+        if not rpr_node:
+            rpr_node = base_export()
+
+        return rpr_node
 
     def export_rpr2(self):
         def volume_export():
