@@ -229,8 +229,10 @@ class Shape(pyrpr.Shape):
         super().set_material(material)
 
     def set_material_faces(self, material, face_indices: np.array):
-        if not self.materials:
-            self.set_material(material)
+        if isinstance(material, EmptyMaterialNode):
+            material = None
+
+        super().set_material_faces(material, face_indices)
 
     def set_hetero_volume(self, hetero_volume):
         pass
@@ -288,14 +290,15 @@ class HeteroVolume(pyrpr.HeteroVolume):
 
 
 class Grid(pyrpr.Grid):
-    pass
-    # def __init__(self, context):
-    #     pass
-    #
-    # @staticmethod
-    # def init_from_3d_array(context, grid_data: np.ndarray):
-    #     pass
-    #
-    # @staticmethod
-    # def init_from_array_indices(context, x, y, z, grid_data, indices):
-    #     pass
+    @staticmethod
+    def init_from_3d_array(context, grid_data: np.ndarray):
+
+        x, y, z = grid_data.shape
+        grid_data = grid_data.reshape(-1)
+
+        indices = np.nonzero(grid_data)[0]
+        data = np.ascontiguousarray(grid_data[indices])
+
+        grid = pyrpr.Grid.init_from_array_indices(context, x, y, z, data, indices)
+
+        return grid

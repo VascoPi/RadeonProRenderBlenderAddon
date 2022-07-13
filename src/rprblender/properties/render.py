@@ -566,8 +566,16 @@ class RPR_RenderProperties(RPR_Properties):
             context_props.extend([
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_VERTEX_MEMORY_SIZE, vertex_mem_size,
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_ACC_MEMORY_SIZE, acc_mem_size])
-               
-        context_props.append(0) # should be followed by 0
+
+        #  this functionality requires additional memory on
+        #  both CPU and GPU even when no per-face materials set in scene.
+        #  checking has_multimaterial_object before enable CONTEXT_CREATEPROP_HYBRID_ENABLE_PER_FACE_MATERIALS.
+        #  has_multimaterial_object = next((True for i in bpy.context.scene.objects if len(i.material_slots) > 1), False)
+        if self.render_quality == 'HYBRIDPRO':  # and has_multimaterial_object:
+            context_props.extend([
+                pyrpr.CONTEXT_CREATEPROP_HYBRID_ENABLE_PER_FACE_MATERIALS, pyrpr.ffi.new('int*', 1)])
+
+        context_props.append(0)  # should be followed by 0
 
         if self.trace_dump:
             if not os.path.isdir(self.trace_dump_folder):
