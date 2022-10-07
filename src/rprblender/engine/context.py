@@ -243,7 +243,7 @@ class RPRContext:
 
     def _sync_mat_hash(self):
         for key in self.material_nodes.keys():
-            key = str(key)
+            key = str(key[0][0])
             self.material_nodes_hashes[get_cryptomatte_name(key)] = get_cryptomatte_hash(key)
 
     def sync_catchers(self, use_transparent_background=None):
@@ -658,6 +658,9 @@ class RPRContext2(RPRContext):
 
     def set_render_update_callback(self, func):
         self.context.set_render_update_callback(func)
+
+    def set_time_callback(self, callback_type, func):
+        self.context.set_time_callback(callback_type, func)
 
     def create_tiled_image(self, key):
         image = pyrpr2.TiledImage(self.context)
