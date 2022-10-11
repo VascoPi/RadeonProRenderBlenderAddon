@@ -254,7 +254,7 @@ def assign_materials(rpr_context: RPRContext, rpr_shape: pyrpr.Shape, obj: bpy.t
         mat = material_slots[0].material
 
         smoke_modifier = volume.get_smoke_modifier(obj)
-        if not smoke_modifier or isinstance(rpr_context, RPRContext2):
+        if not smoke_modifier or isinstance(rpr_context, (RPRContext2, RPRContextHybridPro)):
             # setting volume material
             rpr_volume = material.sync(rpr_context, mat, 'Volume', obj=obj)
             rpr_shape.set_volume_material(rpr_volume)
