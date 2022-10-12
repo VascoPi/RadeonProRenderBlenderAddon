@@ -131,6 +131,7 @@ class DirectionalLight(pyrpr.DirectionalLight):
     pass
 
 
+@class_ignore_unsupported
 class AreaLight(pyrpr.AreaLight):
     def __init__(self, mesh, material_system):
         self.mesh = mesh
@@ -209,6 +210,7 @@ class EmptyMaterialNode(MaterialNode):
         pass
 
 
+@class_ignore_unsupported
 class Shape(pyrpr.Shape):
     def set_volume_material(self, material):
         if isinstance(material, EmptyMaterialNode):
@@ -271,6 +273,7 @@ class Scene(pyrpr.Scene):
         super().clear()
 
 
+@class_ignore_unsupported
 class PostEffect:
     def __init__(self, context, post_effect_type):
         pass
@@ -279,16 +282,17 @@ class PostEffect:
         pass
 
 
+@class_ignore_unsupported
 class Curve(pyrpr.Curve):
     pass
 
 
+@class_ignore_unsupported
 class HeteroVolume(pyrpr.HeteroVolume):
     pass
-    # def set_name(self, name):
-    #     self.name = name
 
 
+@class_ignore_unsupported
 class Grid(pyrpr.Grid):
     @staticmethod
     def init_from_3d_array(context, grid_data: np.ndarray):
