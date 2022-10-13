@@ -92,7 +92,7 @@ class ShaderNodeOutputMaterial(BaseNodeParser):
             # checking if we have connected node to Volume socket
             volume_rpr_node = material.sync(self.rpr_context, self.material, 'Volume')
             if volume_rpr_node:
-                if isinstance(self.rpr_context, (RPRContextHybrid, RPRContextHybridPro)):
+                if isinstance(self.rpr_context, RPRContextHybrid):
                     return self.create_node(pyrpr.MATERIAL_NODE_UBERV2, {
                         pyrpr.MATERIAL_INPUT_UBER_DIFFUSE_WEIGHT: 0.0,
                         pyrpr.MATERIAL_INPUT_UBER_TRANSPARENCY: (1.0, 1.0, 1.0),

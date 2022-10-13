@@ -21,7 +21,9 @@ import bmesh
 import mathutils
 
 import pyrpr
+from pyhybridpro import EmptyMaterialNode
 from rprblender.engine.context import RPRContext, RPRContext2
+from rprblender.engine.context_hybridpro import RPRContext as RPRContextHybridPro
 from . import object, material, volume
 from rprblender.utils import get_data_from_collection, BLENDER_VERSION
 
@@ -252,7 +254,7 @@ def assign_materials(rpr_context: RPRContext, rpr_shape: pyrpr.Shape, obj: bpy.t
         mat = material_slots[0].material
 
         smoke_modifier = volume.get_smoke_modifier(obj)
-        if not smoke_modifier or isinstance(rpr_context, RPRContext2):
+        if not smoke_modifier or isinstance(rpr_context, (RPRContext2, RPRContextHybridPro)):
             # setting volume material
             rpr_volume = material.sync(rpr_context, mat, 'Volume', obj=obj)
             rpr_shape.set_volume_material(rpr_volume)
@@ -355,7 +357,15 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     transform = object.get_transform(obj)
     deformation_data = rpr_context.deformation_cache.get(obj_key)
 
-    if smoke_modifier and isinstance(rpr_context, RPRContext2):
+    surface_material =False
+    volume_material = False
+
+    if obj.material_slots and obj.material_slots[0].material:
+        surface_material = material.sync(rpr_context, obj.material_slots[0].material, 'Surface', obj=obj)
+        volume_material = material.sync(rpr_context, obj.material_slots[0].material, 'Volume', obj=obj)
+
+    if (smoke_modifier and isinstance(rpr_context, RPRContext2))\
+            or (isinstance(rpr_context, RPRContextHybridPro) and (not isinstance(volume_material, EmptyMaterialNode) and isinstance(surface_material, EmptyMaterialNode))):
         transform = volume.get_transform(obj)
         rpr_shape = rpr_context.create_mesh(
             obj_key,

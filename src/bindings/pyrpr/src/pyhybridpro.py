@@ -184,6 +184,7 @@ class DirectionalLight(pyrpr.DirectionalLight):
     pass
 
 
+@class_ignore_unsupported
 class AreaLight(pyrpr.AreaLight):
     def __init__(self, mesh, material_system):
         self.mesh = mesh
@@ -263,6 +264,7 @@ class EmptyMaterialNode(MaterialNode):
         pass
 
 
+@class_ignore_unsupported
 class Shape(pyrpr.Shape):
     def set_volume_material(self, material):
         if isinstance(material, EmptyMaterialNode):
@@ -305,8 +307,8 @@ class Instance(pyrpr.Instance, Shape):
 @class_ignore_unsupported
 class Scene(pyrpr.Scene):
     def attach(self, obj):
-        if isinstance(obj, HeteroVolume):
-            return
+        # if isinstance(obj, HeteroVolume):
+        #     return
 
         super().attach(obj)
 
@@ -325,6 +327,7 @@ class Scene(pyrpr.Scene):
         super().clear()
 
 
+@class_ignore_unsupported
 class PostEffect:
     def __init__(self, context, post_effect_type):
         pass
@@ -333,35 +336,27 @@ class PostEffect:
         pass
 
 
+@class_ignore_unsupported
 class Curve(pyrpr.Curve):
     pass
 
 
-class HeteroVolume:
-    def __init__(self, context):
-        pass
-
-    def set_transform(self, transform: np.array, transpose=True):  # Blender needs matrix to be transposed
-        pass
-
-    def set_grid(self, grid_type, grid):
-        pass
-
-    def set_lookup(self, grid_type, lookup: np.array):
-        pass
-
-    def set_name(self, name):
-        self.name = name
+@class_ignore_unsupported
+class HeteroVolume(pyrpr.HeteroVolume):
+    pass
 
 
-class Grid(pyrpr.HeteroVolume):
-    def __init__(self, context):
-        pass
-
+@class_ignore_unsupported
+class Grid(pyrpr.Grid):
     @staticmethod
     def init_from_3d_array(context, grid_data: np.ndarray):
-        pass
 
-    @staticmethod
-    def init_from_array_indices(context, x, y, z, grid_data, indices):
-        pass
+        x, y, z = grid_data.shape
+        grid_data = grid_data.reshape(-1)
+
+        indices = np.nonzero(grid_data)[0]
+        data = np.ascontiguousarray(grid_data[indices])
+
+        grid = pyrpr.Grid.init_from_array_indices(context, x, y, z, data, indices)
+
+        return grid
