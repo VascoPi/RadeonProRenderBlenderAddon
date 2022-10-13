@@ -160,8 +160,9 @@ class AreaLight(pyrpr.AreaLight):
 @class_ignore_unsupported
 class EnvironmentLight(pyrpr.EnvironmentLight):
     def set_color(self, r, g, b):
-        img = pyrpr.ImageData(self.context,
-                              np.full((64, 64, 4), (r, g, b, 1.0), dtype=np.float32))
+        img = pyrpr.ImageData(self.context, np.full((64, 64, 4), (r, g, b, 1.0), dtype=np.float32))
+        # Requires colorspace to be set explicitly
+        img.set_colorspace('RAW')
         self.set_image(img)
 
 
