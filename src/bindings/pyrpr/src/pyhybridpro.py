@@ -114,9 +114,7 @@ class Context(pyrpr.Context):
 
 
 @class_ignore_unsupported
-class IESLight(pyrpr.PointLight):
-    # IESLight is not supported, that's why we change it to PointLight
-    def set_image_from_file(self, image_path, nx, ny):
+class IESLight(pyrpr.IESLight):
         pass
 
 
@@ -128,6 +126,57 @@ class PointLight(pyrpr.PointLight):
 @class_ignore_unsupported
 class SpotLight(pyrpr.SpotLight):
     pass
+
+
+@class_ignore_unsupported
+class DiskLight(pyrpr.Light):
+    def __init__(self, context):
+        super().__init__(context)
+        pyrpr.ContextCreateDiskLight(self.context, self)
+
+        # keep target intensity and radius to adjust actual intensity when they are changed
+        self._radius_squared = 1
+
+    def set_radiant_power(self, r, g, b):
+        # Adjust intensity by current radius
+        pyrpr.DiskLightSetRadiantPower3f(self,
+                                   r / self._radius_squared,
+                                   g / self._radius_squared,
+                                   b / self._radius_squared)
+
+    def set_cone_shape(self, iangle, oangle):
+        # Use external angle oangle
+        pyrpr.DiskLightSetAngle(self, oangle)
+
+    def set_inner_angle(self, iangle):
+        pyrpr.DiskLightSetInnerAngle(self, iangle)
+
+    def set_radius(self, radius):
+        radius = max(radius, 0.01)
+        self._radius_squared = radius * radius
+        pyrpr.DiskLightSetRadius(self, radius)
+
+
+@class_ignore_unsupported
+class SphereLight(pyrpr.Light):
+    def __init__(self, context):
+        super().__init__(context)
+        pyrpr.ContextCreateSphereLight(self.context, self)
+
+        # keep target intensity and radius to adjust actual intensity when they are changed
+        self._radius_squared = 1
+
+    def set_radiant_power(self, r, g, b):
+        # Adjust intensity by current radius
+        pyrpr.SphereLightSetRadiantPower3f(self,
+                                           r / self._radius_squared,
+                                           g / self._radius_squared,
+                                           b / self._radius_squared)
+
+    def set_radius(self, radius):
+        radius = max(radius, 0.01)
+        self._radius_squared = radius * radius
+        pyrpr.SphereLightSetRadius(self, radius)
 
 
 @class_ignore_unsupported

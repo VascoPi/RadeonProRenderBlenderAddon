@@ -33,10 +33,10 @@ class RPRContext(context.RPRContext):
     _ImageFile = pyhybridpro.ImageFile
 
     _PointLight = pyhybridpro.PointLight
-    _SphereLight = pyhybridpro.PointLight
+    _SphereLight = pyhybridpro.SphereLight
     _DirectionalLight = pyhybridpro.DirectionalLight
     _SpotLight = pyhybridpro.SpotLight
-    _DiskLight = pyhybridpro.SpotLight
+    _DiskLight = pyhybridpro.DiskLight
     _IESLight = pyhybridpro.IESLight
     _AreaLight = pyhybridpro.AreaLight
     _EnvironmentLight = pyhybridpro.EnvironmentLight
