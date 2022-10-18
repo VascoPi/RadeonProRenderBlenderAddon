@@ -21,7 +21,6 @@ import bpy
 import pyrpr
 from rprblender.utils import helper_lib
 from rprblender.engine.context import RPRContext2
-from rprblender.engine.context_hybridpro import RPRContext as RPRContextHybridPro
 
 from . import object, material, volume
 
@@ -46,7 +45,7 @@ def get_transform(obj: bpy.types.Object):
 
 
 def sync(rpr_context, obj: bpy.types.Object, **kwargs):
-    if not isinstance(rpr_context, (RPRContext2, RPRContextHybridPro)):
+    if not isinstance(rpr_context, RPRContext2):
         return
 
     if not helper_lib.is_openvdb_support:
