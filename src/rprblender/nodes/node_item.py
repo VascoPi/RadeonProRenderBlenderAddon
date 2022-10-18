@@ -303,7 +303,7 @@ class NodeItem:
 
     def hsl_to_rgb(self):
         ''' convert hsv back to rgb.
-            see cycles osl code for reference '''
+            see https://github.com/blender/blender/blob/master/intern/cycles/kernel/osl/shaders/node_color.h#L181 '''
         h = self.get_channel(0)
         s = self.get_channel(1)
         l = self.get_channel(2)
@@ -347,7 +347,7 @@ class NodeItem:
 
     def rgb_to_hsl(self):
         ''' convert rgb back to hsl
-            see cycles osl code for reference '''
+            see https://github.com/blender/blender/blob/master/intern/cycles/kernel/osl/shaders/node_color.h#L152 '''
         r = self.get_channel(0)
         g = self.get_channel(1)
         b = self.get_channel(2)
