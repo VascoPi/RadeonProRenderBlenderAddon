@@ -656,8 +656,9 @@ class ShaderNodeTexChecker(NodeParser):
     def export_hybrid(self):
         return None
 
-    def export_hybrid(self):
+    def export_hybridpro(self):
         return self.export()
+
 
 class ShaderNodeTexImage(NodeParser):
     def export(self):
