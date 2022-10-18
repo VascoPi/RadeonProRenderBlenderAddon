@@ -31,6 +31,8 @@ SUPPORTED_AOVS = {pyrpr.AOV_COLOR, pyrpr.AOV_DEPTH, pyrpr.AOV_UV,
                   pyrpr.AOV_DIRECT_ILLUMINATION, pyrpr.AOV_INDIRECT_ILLUMINATION, pyrpr.AOV_REFRACT,
                   pyrpr.AOV_GEOMETRIC_NORMAL, pyrpr.AOV_CAMERA_NORMAL, pyrpr.AOV_OBJECT_GROUP_ID}
 
+DEFAULT_COLORSPACE = 'RAW'
+
 
 def ignore_unsupported(function):
     """Function decorator which ignores UNSUPPORTED and INVALID_PARAMETER core errors"""
@@ -209,11 +211,15 @@ class AreaLight(pyrpr.AreaLight):
 
 @class_ignore_unsupported
 class EnvironmentLight(pyrpr.EnvironmentLight):
-    def set_color(self, r, g, b):
-        img = pyrpr.ImageData(self.context, np.full((64, 64, 4), (r, g, b, 1.0), dtype=np.float32))
+
+    def set_image(self, image):
+        self.image = image
+        if not self.image:
+            self.set_color(1.0, 0.0, 1.0)
+            return
         # Requires colorspace to be set explicitly
-        img.set_colorspace('RAW')
-        self.set_image(img)
+        image.set_colorspace(DEFAULT_COLORSPACE)
+        pyrpr.EnvironmentLightSetImage(self, image)
 
 
 @class_ignore_unsupported
@@ -325,6 +331,14 @@ class Scene(pyrpr.Scene):
             self.remove_environment_light()
 
         super().clear()
+
+    def set_background_image(self, image):
+        if image:
+            # Requires colorspace to be set explicitly
+            image.set_colorspace(DEFAULT_COLORSPACE)
+
+        self.background_image = image
+        pyrpr.SceneSetBackgroundImage(self, image)
 
 
 @class_ignore_unsupported
