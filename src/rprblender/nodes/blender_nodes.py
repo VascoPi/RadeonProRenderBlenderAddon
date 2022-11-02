@@ -253,6 +253,15 @@ class ShaderNodeBsdfAnisotropic(NodeParser):
 
         return result
 
+    def export_hybridpro(self):
+        result = self.export_hybrid()
+        if result:
+            result.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_WEIGHT, 1.0)
+            result.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_MODE, pyrpr.UBER_MATERIAL_IOR_MODE_METALNESS)
+            result.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_METALNESS, 1.0)
+
+        return result
+
 
 class ShaderNodeBsdfDiffuse(RuleNodeParser):
     # inputs: Color, Roughness, Normal
@@ -646,6 +655,9 @@ class ShaderNodeTexChecker(NodeParser):
 
     def export_hybrid(self):
         return None
+
+    def export_hybridpro(self):
+        return self.export()
 
 
 class ShaderNodeTexImage(NodeParser):
@@ -1139,7 +1151,22 @@ class ShaderNodeNewGeometry(RuleNodeParser):
 
         "hybrid:Position": None,
         "hybrid:Normal": None,
-        "hybrid:incoming": None,
+        "hybrid:Incoming": None,
+
+        "hybridpro:Position": {
+            "type": pyrpr.MATERIAL_NODE_INPUT_LOOKUP,
+            "params": {
+                pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_P,
+            }
+        },
+        "hybridpro:Normal": {
+            "type": pyrpr.MATERIAL_NODE_INPUT_LOOKUP,
+            "params": {
+                pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_N,
+            }
+        },
+
+        "hybridpro:Incoming": None,
     }
 
 
@@ -1527,6 +1554,9 @@ class ShaderNodeVectorMath(NodeParser):
         # other operations are supported by Hybrid
         return self.export()
 
+    def export_hybridpro(self) -> [NodeItem, None]:
+        return self.export()
+
 
 class ShaderNodeMixShader(NodeParser):
     # inputs = ['Fac', 1, 2]
@@ -1657,6 +1687,9 @@ class ShaderNodeBump(NodeParser):
             })
 
         return strength.blend(normal_node, bump_node + normal_node)
+
+    def export_hybridpro(self):
+        return None
 
 
 class ShaderNodeValue(NodeParser):
@@ -2134,6 +2167,43 @@ class ShaderNodeSeparateRGB(NodeParser):
             return value.get_channel(1)
 
         return value.get_channel(2)
+
+
+class ShaderNodeCombineColor(NodeParser):
+    """ Combine 3 input values to vector/color (v1, v2, v3, 0.0), accept input maps """
+    def export(self):
+        mode = self.node.mode
+
+        value1 = self.get_input_value(0)
+        value2 = self.get_input_value(1)
+        value3 = self.get_input_value(2)
+
+        res = value1.combine(value2, value3)
+
+        if mode == 'HSL':
+            return res.hsl_to_rgb()
+
+        elif mode == 'HSV':
+            return res.hsv_to_rgb()
+
+        return res
+
+
+class ShaderNodeSeparateColor(NodeParser):
+    """ Split input value(color) to 3 separate values by RGB, HSV, HSL channels """
+    def export(self):
+        value = self.get_input_value(0)
+        mode = self.node.mode
+        socket = {'Red': 0, 'Green': 1, 'Blue': 2,
+                  'Hue': 0, 'Saturation': 1, 'Value': 2, 'Lightness': 2,}[self.socket_out.name]
+
+        if mode == 'HSL':
+            return value.rgb_to_hsl().get_channel(socket)
+
+        elif mode == 'HSV':
+            return value.rgb_to_hsv().get_channel(socket)
+
+        return value.get_channel(socket)
 
 
 class ShaderNodeSeparateXYZ(NodeParser):
@@ -2690,3 +2760,26 @@ class ShaderNodeEeveeSpecular(NodeParser):
                 rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_COATING_NORMAL, normal)
 
         return rpr_node
+
+
+class ShaderNodeBevel(NodeParser):
+    def export(self):
+        samples = self.node.samples
+        radius = self.get_input_value('Radius')
+        normal = self.get_input_link('Normal')
+
+        if radius.is_zero():
+            return self.get_input_normal('Normal')
+
+        bevel = self.create_node(pyrpr.MATERIAL_NODE_ROUNDED_CORNER, {
+            pyrpr.MATERIAL_INPUT_SAMPLES: samples,
+            pyrpr.MATERIAL_INPUT_RADIUS: radius,
+        })
+
+        if normal is None:
+            return bevel
+
+        return (bevel + normal).normalize()
+
+    def export_hybrid(self):
+        return None

@@ -38,6 +38,7 @@ from rprblender import utils
 from rprblender.utils.user_settings import get_user_settings, on_settings_changed
 from . import RPR_Properties
 from rprblender.engine import context
+from rprblender.engine.context_hybridpro import RPRContext as RPRContextHybridPro
 
 from rprblender.utils import logging
 log = logging.Log(tag='properties.render')
@@ -570,10 +571,10 @@ class RPR_RenderProperties(RPR_Properties):
         #  this functionality requires additional memory on
         #  both CPU and GPU even when no per-face materials set in scene.
         #  checking has_multimaterial_object before enable CONTEXT_CREATEPROP_HYBRID_ENABLE_PER_FACE_MATERIALS.
-        #  has_multimaterial_object = next((True for i in bpy.context.scene.objects if len(i.material_slots) > 1), False)
-        if self.render_quality == 'HYBRIDPRO':  # and has_multimaterial_object:
-            context_props.extend([
-                pyrpr.CONTEXT_CREATEPROP_HYBRID_ENABLE_PER_FACE_MATERIALS, pyrpr.ffi.new('int*', 1)])
+        if isinstance(rpr_context, RPRContextHybridPro):
+            if next((True for i in bpy.context.scene.objects
+                     if len(i.material_slots) > 1 and len([m for m in i.material_slots if m.material]) > 1), False):
+                context_props.extend([pyrpr.CONTEXT_CREATEPROP_HYBRID_ENABLE_PER_FACE_MATERIALS, pyrpr.ffi.new('int*', 1)])
 
         context_props.append(0)  # should be followed by 0
 
@@ -600,6 +601,7 @@ class RPR_RenderProperties(RPR_Properties):
                 os.mkdir(self.texture_cache_dir)
             rpr_context.set_parameter(pyrpr.CONTEXT_TEXTURE_CACHE_PATH, self.texture_cache_dir)
 
+        if isinstance(rpr_context, (context.RPRContext2, RPRContextHybridPro)):
             # check for custom ocio setting and use it if exists
             ocio_config_path = os.path.join(utils.package_root_dir(),'ocio_config',
                                             utils.BLENDER_VERSION, 'config.ocio')
