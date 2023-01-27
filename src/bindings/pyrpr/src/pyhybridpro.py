@@ -106,16 +106,16 @@ class Context(pyrpr.Context):
     def register_plugin(cls, lib_path, cache_path):
         super().register_plugin(lib_path, cache_path)
 
-        # trying to create context
-        try:
-            context = cls(pyrpr.CREATION_FLAGS_ENABLE_GPU0)
-
-        except pyrpr.CoreError as err:
-            if err.status == pyrpr.ERROR_UNSUPPORTED:
-                cls.plugin_id = -1
-                raise RuntimeError("Plugin is not registered", lib_path, err.error_message)
-
-            raise err
+        # # trying to create context
+        # try:
+        #     context = cls(pyrpr.CREATION_FLAGS_ENABLE_GPU0)
+        #
+        # except pyrpr.CoreError as err:
+        #     if err.status == pyrpr.ERROR_UNSUPPORTED:
+        #         cls.plugin_id = -1
+        #         raise RuntimeError("Plugin is not registered", lib_path, err.error_message)
+        #
+        #     raise err
 
 
 @class_ignore_unsupported

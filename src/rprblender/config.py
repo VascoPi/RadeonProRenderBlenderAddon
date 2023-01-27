@@ -20,7 +20,7 @@ pyrpr_log_calls = False
 pyrprimagefilters_log_calls = False
 pyrprgltf_log_calls = False
 hybrid_unsupported_log_warn = False
-hybridpro_unsupported_log_warn = False
+hybridpro_unsupported_log_warn = True
 
 material_library_path = None
 
