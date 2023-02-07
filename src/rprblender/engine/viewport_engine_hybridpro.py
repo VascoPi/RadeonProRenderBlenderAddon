@@ -31,6 +31,7 @@ class ViewportEngine(viewport_engine.ViewportEngine):
 
         self.render_image = None
         self.is_denoised = False
+        self.is_upscaled = False
 
     def _resolve(self):
         self.render_image = self.rpr_context.get_image()
@@ -48,6 +49,7 @@ class ViewportEngine(viewport_engine.ViewportEngine):
     def sync(self, context, depsgraph):
         super().sync(context, depsgraph)
 
+        # denoiser settings
         self.rpr_context.set_parameter(pyrpr.CONTEXT_MATERIAL_CACHE, True)
         self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_GI, True)
         self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_GI_BIAS_CORRECTION, 3)
@@ -55,12 +57,21 @@ class ViewportEngine(viewport_engine.ViewportEngine):
         self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS, 3)
         self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL, 128)
 
+        # upscaler settings
+        self.rpr_context.set_parameter(pyrpr.CONTEXT_FSR2_QUALITY, pyrpr.FSR2_QUALITY_MODE_BALANCE)
+
         log("Finish sync")
 
     def setup_image_filter(self, settings):
         self.is_denoised = settings['enable']
         self.rpr_context.set_parameter(pyrpr.CONTEXT_PT_DENOISER,
                                        pyrpr.DENOISER_SVGF if self.is_denoised else pyrpr.DENOISER_NONE)
+
+    def setup_upscale_filter(self, settings):
+        # upscaler works only if denoiser is used
+        self.is_upscaled = settings['enable'] and self.is_denoised
+        self.rpr_context.set_parameter(pyrpr.CONTEXT_UPSCALER,
+                                       pyrpr.UPSCALER_FSR2 if self.is_upscaled else pyrpr.UPSCALER_NONE)
 
     def notify_status(self, info, status):
         # Adding " | Denoised" to status message
