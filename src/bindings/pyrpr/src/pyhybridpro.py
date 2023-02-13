@@ -310,13 +310,15 @@ class HeteroVolume(pyrpr.HeteroVolume):
 class Grid(pyrpr.Grid):
     @staticmethod
     def init_from_3d_array(context, grid_data: np.ndarray):
-
+        log.warn("BLENDER", np.nonzero(grid_data))
         x, y, z = grid_data.shape
-        grid_data = grid_data.reshape(-1)
+        grid_data = grid_data.transpose()
+        indices_1 = np.reshape(np.array(np.nonzero(grid_data)), (-1, 3))
+        # grid_data = grid_data.reshape(-1)
 
         indices = np.nonzero(grid_data)[0]
-        data = np.ascontiguousarray(grid_data[indices])
+        data = grid_data[np.nonzero(grid_data)]
 
-        grid = pyrpr.Grid.init_from_array_indices(context, x, y, z, data, indices)
+        grid = pyrpr.Grid.init_from_array_indices(context, x, y, z, data, indices_1)
 
         return grid
