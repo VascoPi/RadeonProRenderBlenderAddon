@@ -515,6 +515,7 @@ class ViewportEngine(Engine):
         self.setup_upscale_filter({
             'enable': scene.rpr.viewport_upscale,
             'resolution': (self.width, self.height),
+            'scene': scene,
         })
 
         # other context settings
@@ -1091,6 +1092,7 @@ class ViewportEngine(Engine):
         restart |= self.setup_upscale_filter({
             'enable': scene.rpr.viewport_upscale,
             'resolution': (self.width, self.height),
+            'scene': scene,
         })
 
         return restart
