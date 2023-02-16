@@ -30,6 +30,7 @@ from .node_parser import NodeParser, RuleNodeParser
 from .blender_nodes import SSS_MIN_RADIUS, COLOR_GAMMA, ERROR_IMAGE_COLOR
 
 from rprblender.export import image as image_export
+from rprblender.export import object, light
 
 from rprblender.utils import logging, BLENDER_VERSION
 log = logging.Log(tag='export.rpr_nodes')
@@ -1576,18 +1577,31 @@ class RPRShaderNodeToon(RPRShaderNode):
 
     def advanced_changed(self, context):
         ramp_sockets = ['Shadow Color', "Mid Level","Mid Color", "Highlight Level", "Highlight Color"]
+        ramp_sockets_5 = ["Shadow Color 2", "Highlight Color 2"]
         mix_sockets = ["Mid Level Mix", "Highlight Level Mix"]
+        transparency_sockets = ['Transparency']
         if self.show_advanced:
-            for socket in ramp_sockets:
-                self.inputs[socket].enabled = True
+            for socket in ramp_sockets + transparency_sockets:
+                self.inputs[socket].enabled = self.show_advanced
+            for socket in ramp_sockets_5:
+                self.inputs[socket].enabled = self.five_colors
             for socket in mix_sockets:
                 self.inputs[socket].enabled = self.show_mix_levels
         else:
-            for socket in ramp_sockets + mix_sockets:
+            for socket in ramp_sockets + ramp_sockets_5 + mix_sockets + transparency_sockets:
                 self.inputs[socket].enabled = False
+
+        # update node
+        self.socket_value_update(context)
+
+    def poll_light(self, obj):
+        return obj.type == 'LIGHT' and obj.users
 
     show_advanced: BoolProperty(name="Advanced", default=False, update=advanced_changed)
     show_mix_levels: BoolProperty(name="Mix Levels", default=False, update=advanced_changed)
+    mid_color_as_albedo: BoolProperty(name="Mid Color as Albedo", default=False, update=advanced_changed)
+    five_colors: BoolProperty(name="5 Colors", default=False, update=advanced_changed)
+    light: bpy.props.PointerProperty(type=bpy.types.Object, name="Light", description="Object for scattering instances", update=advanced_changed, poll=poll_light)
 
     def init(self, context):
         # Adding input sockets with default_value or hide_value properties.
@@ -1597,6 +1611,9 @@ class RPRShaderNodeToon(RPRShaderNode):
         self.inputs.new('NodeSocketVector', "Normal").hide_value = True
 
         inp = self.inputs.new('rpr_socket_color', "Shadow Color")
+        inp.default_value = (0.0, 0.0, 0.0, 1.0)    # Corresponds to Cycles diffuse
+        inp.enabled = False
+        inp = self.inputs.new('rpr_socket_color', "Shadow Color 2")
         inp.default_value = (0.0, 0.0, 0.0, 1.0)    # Corresponds to Cycles diffuse
         inp.enabled = False
         inp = self.inputs.new('rpr_socket_weight', "Mid Level")
@@ -1617,6 +1634,13 @@ class RPRShaderNodeToon(RPRShaderNode):
         inp = self.inputs.new('rpr_socket_color', "Highlight Color")
         inp.default_value = (0.8, 0.8, 0.8, 1.0)    # Corresponds to Cycles diffuse
         inp.enabled = False
+        inp = self.inputs.new('rpr_socket_color', "Highlight Color 2")
+        inp.default_value = (0.8, 0.8, 0.8, 1.0)    # Corresponds to Cycles diffuse
+        inp.enabled = False
+
+        inp = self.inputs.new('rpr_socket_weight', "Transparency")
+        inp.default_value = 0.0
+        inp.enabled = False
 
         # adding output socket
         self.outputs.new('NodeSocketShader', "Shader")
@@ -1627,6 +1651,9 @@ class RPRShaderNodeToon(RPRShaderNode):
         col.prop(self, 'show_advanced')
         if self.show_advanced:
             col.prop(self, 'show_mix_levels')
+            col.prop(self, 'mid_color_as_albedo')
+            col.prop(self, 'five_colors')
+            col.prop(self, 'light')
 
     class Exporter(RuleNodeParser):
         def export(self):
@@ -1644,12 +1671,38 @@ class RPRShaderNodeToon(RPRShaderNode):
                     pyrpr.MATERIAL_INPUT_RANGE2: self.get_input_value('Highlight Level Mix'),
                     pyrpr.MATERIAL_INPUT_INTERPOLATION: interpolation_mode,
                 })
+                if self.node.five_colors:
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_TOON_5_COLORS, True)
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_SHADOW2, self.get_input_value('Shadow Color 2'))
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_HIGHLIGHT2, self.get_input_value('Highlight Color 2'))
 
                 toon_shader = self.create_node(pyrpr.MATERIAL_NODE_TOON_CLOSURE, {
                     pyrpr.MATERIAL_INPUT_COLOR: self.get_input_value('Color'),
                     pyrpr.MATERIAL_INPUT_ROUGHNESS: self.get_input_value('Roughness'),
                     pyrpr.MATERIAL_INPUT_DIFFUSE_RAMP: ramp
                 })
+
+                if self.node.mid_color_as_albedo:
+                    toon_shader.set_input(pyrpr.MATERIAL_INPUT_MID_IS_ALBEDO, True)
+
+                if self.node.light:
+                    # we sync light here because there are cases
+                    # the light isn't in rpr_context yet
+                    rpr_light = light.sync(self.rpr_context, self.node.light)
+                    if rpr_light:
+                        toon_shader.set_input(pyrpr.MATERIAL_INPUT_LIGHT, rpr_light)
+                    else:
+                        log.warn("Ignoring unsupported RPR Light", self.node.light)
+
+                transparency = self.get_input_value('Transparency')
+                if not transparency.is_zero():
+                    transparency_node = self.create_node(pyrpr.MATERIAL_NODE_TRANSPARENT, {
+                        pyrpr.MATERIAL_INPUT_COLOR: (1, 1, 1)})
+                    toon_shader = self.create_node(pyrpr.MATERIAL_NODE_BLEND,
+                                                   {pyrpr.MATERIAL_INPUT_WEIGHT: transparency,
+                                                    pyrpr.MATERIAL_INPUT_COLOR0: toon_shader,
+                                                    pyrpr.MATERIAL_INPUT_COLOR1: transparency_node})
+
             else:
                 toon_shader = self.create_node(pyrpr.MATERIAL_NODE_TOON_CLOSURE, {
                     pyrpr.MATERIAL_INPUT_COLOR: self.get_input_value('Color'),
@@ -1661,3 +1714,6 @@ class RPRShaderNodeToon(RPRShaderNode):
                 toon_shader.set_input(pyrpr.MATERIAL_INPUT_NORMAL, normal)
 
             return toon_shader
+
+        def export_hybridpro(self):
+            return None
