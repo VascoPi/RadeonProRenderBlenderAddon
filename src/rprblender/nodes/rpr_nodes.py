@@ -1592,7 +1592,7 @@ class RPRShaderNodeToon(RPRShaderNode):
                 self.inputs[socket].enabled = False
 
     def poll_light(self, obj):
-        return obj.type == 'LIGHT'
+        return obj.type == 'LIGHT' and obj.users
 
     show_advanced: BoolProperty(name="Advanced", default=False, update=advanced_changed)
     show_mix_levels: BoolProperty(name="Mix Levels", default=False, update=advanced_changed)
@@ -1687,13 +1687,12 @@ class RPRShaderNodeToon(RPRShaderNode):
             if self.node.mid_color_as_albedo:
                 toon_shader.set_input(pyrpr.MATERIAL_INPUT_MID_IS_ALBEDO, True)
 
-            log.warn("Ignoring unsupported RPR Light", self.node.light)
             if self.node.light:
-                light.sync(self.rpr_context, self.node.light)
-                rpr_light = self.rpr_context.objects[object.key(self.node.light)]
+                # we sync light here because there are cases
+                # the light isn't in rpr_context yet
+                rpr_light = light.sync(self.rpr_context, self.node.light)
                 if rpr_light:
                     toon_shader.set_input(pyrpr.MATERIAL_INPUT_LIGHT, rpr_light)
-
                 else:
                     log.warn("Ignoring unsupported RPR Light", self.node.light)
 
@@ -1709,6 +1708,5 @@ class RPRShaderNodeToon(RPRShaderNode):
                                             {pyrpr.MATERIAL_INPUT_WEIGHT: transparency,
                                              pyrpr.MATERIAL_INPUT_COLOR0: toon_shader,
                                              pyrpr.MATERIAL_INPUT_COLOR1: transparency_node})
-
 
             return toon_shader
