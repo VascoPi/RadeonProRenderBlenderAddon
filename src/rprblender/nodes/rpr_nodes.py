@@ -1591,6 +1591,9 @@ class RPRShaderNodeToon(RPRShaderNode):
             for socket in ramp_sockets + ramp_sockets_5 + mix_sockets + transparency_sockets:
                 self.inputs[socket].enabled = False
 
+        # update node
+        self.socket_value_update(context)
+
     def poll_light(self, obj):
         return obj.type == 'LIGHT' and obj.users
 
@@ -1678,35 +1681,39 @@ class RPRShaderNodeToon(RPRShaderNode):
                     pyrpr.MATERIAL_INPUT_ROUGHNESS: self.get_input_value('Roughness'),
                     pyrpr.MATERIAL_INPUT_DIFFUSE_RAMP: ramp
                 })
+
+                if self.node.mid_color_as_albedo:
+                    toon_shader.set_input(pyrpr.MATERIAL_INPUT_MID_IS_ALBEDO, True)
+
+                if self.node.light:
+                    # we sync light here because there are cases
+                    # the light isn't in rpr_context yet
+                    rpr_light = light.sync(self.rpr_context, self.node.light)
+                    if rpr_light:
+                        toon_shader.set_input(pyrpr.MATERIAL_INPUT_LIGHT, rpr_light)
+                    else:
+                        log.warn("Ignoring unsupported RPR Light", self.node.light)
+
+                transparency = self.get_input_value('Transparency')
+                if not transparency.is_zero():
+                    transparency_node = self.create_node(pyrpr.MATERIAL_NODE_TRANSPARENT, {
+                        pyrpr.MATERIAL_INPUT_COLOR: (1, 1, 1)})
+                    toon_shader = self.create_node(pyrpr.MATERIAL_NODE_BLEND,
+                                                   {pyrpr.MATERIAL_INPUT_WEIGHT: transparency,
+                                                    pyrpr.MATERIAL_INPUT_COLOR0: toon_shader,
+                                                    pyrpr.MATERIAL_INPUT_COLOR1: transparency_node})
+
             else:
                 toon_shader = self.create_node(pyrpr.MATERIAL_NODE_TOON_CLOSURE, {
                     pyrpr.MATERIAL_INPUT_COLOR: self.get_input_value('Color'),
                     pyrpr.MATERIAL_INPUT_ROUGHNESS: self.get_input_value('Roughness')
                 })
 
-            if self.node.mid_color_as_albedo:
-                toon_shader.set_input(pyrpr.MATERIAL_INPUT_MID_IS_ALBEDO, True)
-
-            if self.node.light:
-                # we sync light here because there are cases
-                # the light isn't in rpr_context yet
-                rpr_light = light.sync(self.rpr_context, self.node.light)
-                if rpr_light:
-                    toon_shader.set_input(pyrpr.MATERIAL_INPUT_LIGHT, rpr_light)
-                else:
-                    log.warn("Ignoring unsupported RPR Light", self.node.light)
-
             normal = self.get_input_link('Normal')        
             if normal:
                 toon_shader.set_input(pyrpr.MATERIAL_INPUT_NORMAL, normal)
 
-            transparency = self.get_input_value('Transparency')
-            if not transparency.is_zero():
-                transparency_node = self.create_node(pyrpr.MATERIAL_NODE_TRANSPARENT, {
-                    pyrpr.MATERIAL_INPUT_COLOR: (1, 1, 1)})
-                toon_shader = self.create_node(pyrpr.MATERIAL_NODE_BLEND,
-                                            {pyrpr.MATERIAL_INPUT_WEIGHT: transparency,
-                                             pyrpr.MATERIAL_INPUT_COLOR0: toon_shader,
-                                             pyrpr.MATERIAL_INPUT_COLOR1: transparency_node})
-
             return toon_shader
+
+        def export_hybridpro(self):
+            return None
