@@ -1657,6 +1657,15 @@ class RPRShaderNodeToon(RPRShaderNode):
 
     class Exporter(RuleNodeParser):
         def export(self):
+            toon_shader = self.create_node(pyrpr.MATERIAL_NODE_TOON_CLOSURE, {
+                pyrpr.MATERIAL_INPUT_COLOR: self.get_input_value('Color'),
+                pyrpr.MATERIAL_INPUT_ROUGHNESS: self.get_input_value('Roughness'),
+            })
+
+            normal = self.get_input_link('Normal')
+            if normal:
+                toon_shader.set_input(pyrpr.MATERIAL_INPUT_NORMAL, normal)
+
             if self.node.show_advanced:
                 # build the toon ramp node
                 interpolation_mode = pyrpr.INTERPOLATION_MODE_LINEAR if self.node.show_mix_levels \
@@ -1676,11 +1685,7 @@ class RPRShaderNodeToon(RPRShaderNode):
                     ramp.set_input(pyrpr.MATERIAL_INPUT_SHADOW2, self.get_input_value('Shadow Color 2'))
                     ramp.set_input(pyrpr.MATERIAL_INPUT_HIGHLIGHT2, self.get_input_value('Highlight Color 2'))
 
-                toon_shader = self.create_node(pyrpr.MATERIAL_NODE_TOON_CLOSURE, {
-                    pyrpr.MATERIAL_INPUT_COLOR: self.get_input_value('Color'),
-                    pyrpr.MATERIAL_INPUT_ROUGHNESS: self.get_input_value('Roughness'),
-                    pyrpr.MATERIAL_INPUT_DIFFUSE_RAMP: ramp
-                })
+                toon_shader.set_input(pyrpr.MATERIAL_INPUT_DIFFUSE_RAMP, ramp)
 
                 if self.node.mid_color_as_albedo:
                     toon_shader.set_input(pyrpr.MATERIAL_INPUT_MID_IS_ALBEDO, True)
@@ -1702,16 +1707,6 @@ class RPRShaderNodeToon(RPRShaderNode):
                                                    {pyrpr.MATERIAL_INPUT_WEIGHT: transparency,
                                                     pyrpr.MATERIAL_INPUT_COLOR0: toon_shader,
                                                     pyrpr.MATERIAL_INPUT_COLOR1: transparency_node})
-
-            else:
-                toon_shader = self.create_node(pyrpr.MATERIAL_NODE_TOON_CLOSURE, {
-                    pyrpr.MATERIAL_INPUT_COLOR: self.get_input_value('Color'),
-                    pyrpr.MATERIAL_INPUT_ROUGHNESS: self.get_input_value('Roughness')
-                })
-
-            normal = self.get_input_link('Normal')        
-            if normal:
-                toon_shader.set_input(pyrpr.MATERIAL_INPUT_NORMAL, normal)
 
             return toon_shader
 
