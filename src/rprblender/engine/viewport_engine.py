@@ -692,7 +692,7 @@ class ViewportEngine(Engine):
                             mat, 'RPRShaderNodeToon'
                         )
                         for node in toonshader_nodes:
-                            if node.light.data == light:
+                            if node.linked_light.data == light:
                                 is_updated |= self.update_material_on_scene_objects(
                                     mat, depsgraph
                                 )
