@@ -1696,13 +1696,18 @@ class RPRShaderNodeToon(RPRShaderNode):
                     toon_shader.set_input(pyrpr.MATERIAL_INPUT_MID_IS_ALBEDO, True)
 
                 if self.node.linked_light:
-                    # we sync light here because there are cases
-                    # the light isn't in rpr_context yet
-                    rpr_light = light.sync(self.rpr_context, self.node.linked_light)
-                    if rpr_light:
-                        toon_shader.set_input(pyrpr.MATERIAL_INPUT_LIGHT, rpr_light)
+                    # now we can't set Area light (emissive object) to it but only light object
+                    if self.node.linked_light.data.type != 'AREA':
+                        # we sync light here because there are cases
+                        # the light isn't in rpr_context yet
+                        rpr_light = light.sync(self.rpr_context, self.node.linked_light)
+                        if rpr_light:
+                            toon_shader.set_input(pyrpr.MATERIAL_INPUT_LIGHT, rpr_light)
+
                     else:
-                        log.warn("Ignoring unsupported RPR Light", self.node.linked_light)
+                        log.warn(
+                            "Ignoring unsupported Light type", self.node.linked_light.data.type
+                        )
 
             transparency = self.get_input_value('Transparency')
             if not transparency.is_zero():
