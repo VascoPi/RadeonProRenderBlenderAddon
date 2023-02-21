@@ -177,7 +177,7 @@ class RPR_RENDER_PT_viewport_limits(RPR_Panel):
         col1 = col.column()
 
         col1.prop(rpr, 'viewport_upscale')
-        if rpr.render_quality in ('HYBRIDPRO'):
+        if rpr.render_quality == 'HYBRIDPRO':
             col1.enabled = rpr.viewport_denoiser
             col2 = col.column()
             col2.enabled = rpr.viewport_upscale and rpr.viewport_denoiser
