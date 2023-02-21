@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #********************************************************************
+import bpy
+
 from . import viewport_engine
 from . import context_hybridpro
 
 import pyrpr
-import pyrprwrap
 
 from rprblender.operators.world import FOG_KEY
 
@@ -65,14 +66,14 @@ class ViewportEngine(viewport_engine.ViewportEngine):
 
     def setup_upscale_filter(self, settings):
         res = False
-        scene = settings['scene']
+        scene = bpy.context.scene
 
         # UPSCALER_FSR2 works only if denoiser is enabled
         self.is_upscaled = settings['enable'] and self.is_denoised
         if self.is_upscaled:
             res |= self.rpr_context.set_parameter(pyrpr.CONTEXT_UPSCALER, pyrpr.UPSCALER_FSR2)
             res |= self.rpr_context.set_parameter(pyrpr.CONTEXT_FSR2_QUALITY,
-                                                 getattr(pyrprwrap, scene.rpr.viewport_upscale_quality))
+                                                 getattr(pyrpr, scene.rpr.viewport_upscale_quality))
         else:
             res |= self.rpr_context.set_parameter(pyrpr.CONTEXT_UPSCALER, pyrpr.UPSCALER_NONE)
 
