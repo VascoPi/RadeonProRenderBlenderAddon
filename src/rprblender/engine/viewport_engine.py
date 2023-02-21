@@ -684,18 +684,15 @@ class ViewportEngine(Engine):
                     # to get updated pointer
                     materials = set(
                         material_slot.material for obj in self.depsgraph_objects(depsgraph)
-                        for material_slot in obj.material_slots if material_slot.material)
+                        for material_slot in obj.material_slots if material_slot.material
+                    )
                     # exclude materials that are already updated
                     materials -= set(update[0] for update in updates)
                     for mat in materials:
-                        toonshader_nodes = material.get_material_nodes_by_type(
-                            mat, 'RPRShaderNodeToon'
-                        )
+                        toonshader_nodes = material.get_material_nodes_by_type(mat, 'RPRShaderNodeToon')
                         for node in toonshader_nodes:
                             if node.linked_light.data == light:
-                                is_updated |= self.update_material_on_scene_objects(
-                                    mat, depsgraph
-                                )
+                                is_updated |= self.update_material_on_scene_objects(mat, depsgraph)
                                 break
 
                 if isinstance(obj, bpy.types.World):
