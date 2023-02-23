@@ -1577,15 +1577,19 @@ class RPRShaderNodeToon(RPRShaderNode):
 
     def advanced_changed(self, context):
         ramp_sockets = [
-            'Shadow Color',
-            "Shadow Color 2",
+            "Shadow Color",
+            "Mid Shadow Level",
+            "Mid Shadow Level Mix",
+            "Mid Shadow Color",
             "Mid Level",
-            "Mid Color",
-            "Highlight Level",
-            "Highlight Color",
-            "Highlight Color 2",
             "Mid Level Mix",
+            "Mid Color",
+            "Mid Highlight Level",
+            "Mid Highlight Level Mix",
+            "Mid Highlight Color",
+            "Highlight Level",
             "Highlight Level Mix",
+            "Highlight Color",
         ]
 
         for socket in ramp_sockets:
@@ -1624,12 +1628,24 @@ class RPRShaderNodeToon(RPRShaderNode):
         self.inputs.new('rpr_socket_weight', "Transparency").default_value = 0.0
         self.inputs.new('NodeSocketVector', "Normal").hide_value = True
 
-        inp = self.inputs.new('rpr_socket_color', "Shadow Color 2")
+        # Adding ramp sockets
+        # Shadow
+        inp = self.inputs.new('rpr_socket_color', "Shadow Color")
         inp.default_value = (0.0, 0.0, 0.0, 1.0)
         inp.enabled = False
-        inp = self.inputs.new('rpr_socket_color', "Shadow Color")
+
+        # Mid Shadow
+        inp = self.inputs.new('rpr_socket_weight', "Mid Shadow Level")
+        inp.default_value = 0.2
+        inp.enabled = False
+        inp = self.inputs.new('rpr_socket_weight', "Mid Shadow Level Mix")
+        inp.default_value = 0.05
+        inp.enabled = False
+        inp = self.inputs.new('rpr_socket_color', "Mid Shadow Color")
         inp.default_value = (0.0, 0.0, 0.0, 1.0)    # Corresponds to Cycles diffuse
         inp.enabled = False
+
+        # Mid
         inp = self.inputs.new('rpr_socket_weight', "Mid Level")
         inp.default_value = 0.5
         inp.enabled = False
@@ -1639,16 +1655,26 @@ class RPRShaderNodeToon(RPRShaderNode):
         inp = self.inputs.new('rpr_socket_color', "Mid Color")
         inp.default_value = (0.4, 0.4, 0.4, 1.0)    # Corresponds to Cycles diffuse
         inp.enabled = False
-        inp = self.inputs.new('rpr_socket_weight', "Highlight Level")
+
+        # Mid Highlight
+        inp = self.inputs.new('rpr_socket_weight', "Mid Highlight Level")
         inp.default_value = 0.8
+        inp.enabled = False
+        inp = self.inputs.new('rpr_socket_weight', "Mid Highlight Level Mix")
+        inp.default_value = 0.05
+        inp.enabled = False
+        inp = self.inputs.new('rpr_socket_color', "Mid Highlight Color")
+        inp.default_value = (0.8, 0.8, 0.8, 1.0)    # Corresponds to Cycles diffuse
+        inp.enabled = False
+
+        # Highlight
+        inp = self.inputs.new('rpr_socket_weight', "Highlight Level")
+        inp.default_value = 0.9
         inp.enabled = False
         inp = self.inputs.new('rpr_socket_weight', "Highlight Level Mix")
         inp.default_value = 0.05
         inp.enabled = False
         inp = self.inputs.new('rpr_socket_color', "Highlight Color")
-        inp.default_value = (0.8, 0.8, 0.8, 1.0)    # Corresponds to Cycles diffuse
-        inp.enabled = False
-        inp = self.inputs.new('rpr_socket_color', "Highlight Color 2")
         inp.default_value = (0.8, 0.8, 0.8, 1.0)    # Corresponds to Cycles diffuse
         inp.enabled = False
 
@@ -1678,16 +1704,31 @@ class RPRShaderNodeToon(RPRShaderNode):
                 # build the toon ramp node
                 ramp = self.create_node(pyrpr.MATERIAL_NODE_TOON_RAMP, {
                     pyrpr.MATERIAL_INPUT_TOON_5_COLORS: True,
-                    pyrpr.MATERIAL_INPUT_SHADOW2: self.get_input_value('Shadow Color 2'),
-                    pyrpr.MATERIAL_INPUT_SHADOW: self.get_input_value('Shadow Color'),
-                    pyrpr.MATERIAL_INPUT_MID: self.get_input_value('Mid Color'),
-                    pyrpr.MATERIAL_INPUT_HIGHLIGHT: self.get_input_value('Highlight Color'),
-                    pyrpr.MATERIAL_INPUT_POSITION1: self.get_input_value('Mid Level'),
-                    pyrpr.MATERIAL_INPUT_POSITION2: self.get_input_value('Highlight Level'),
-                    pyrpr.MATERIAL_INPUT_RANGE1: self.get_input_value('Mid Level Mix'),
-                    pyrpr.MATERIAL_INPUT_RANGE2: self.get_input_value('Highlight Level Mix'),
-                    pyrpr.MATERIAL_INPUT_HIGHLIGHT2: self.get_input_value('Highlight Color 2'),
                     pyrpr.MATERIAL_INPUT_INTERPOLATION: pyrpr.INTERPOLATION_MODE_LINEAR,
+
+                    # Shadow
+                    pyrpr.MATERIAL_INPUT_SHADOW2: self.get_input_value('Shadow Color'),
+
+                    # Mid Shadow
+                    pyrpr.MATERIAL_INPUT_POSITION_SHADOW: self.get_input_value('Mid Shadow Level'),
+                    pyrpr.MATERIAL_INPUT_RANGE_SHADOW: self.get_input_value('Mid Shadow Level Mix'),
+                    pyrpr.MATERIAL_INPUT_SHADOW: self.get_input_value('Mid Shadow Color'),
+
+                    # Mid
+                    pyrpr.MATERIAL_INPUT_POSITION1: self.get_input_value('Mid Level'),
+                    pyrpr.MATERIAL_INPUT_RANGE1: self.get_input_value('Mid Level Mix'),
+                    pyrpr.MATERIAL_INPUT_MID: self.get_input_value('Mid Color'),
+
+                    # Mid Highlight
+                    pyrpr.MATERIAL_INPUT_POSITION2: self.get_input_value('Mid Highlight Level'),
+                    pyrpr.MATERIAL_INPUT_RANGE2: self.get_input_value('Mid Highlight Level Mix'),
+                    pyrpr.MATERIAL_INPUT_HIGHLIGHT: self.get_input_value('Mid Highlight Color'),
+
+                    # Highlight
+                    pyrpr.MATERIAL_INPUT_POSITION_HIGHLIGHT: self.get_input_value('Highlight Level'),
+                    pyrpr.MATERIAL_INPUT_RANGE_HIGHLIGHT: self.get_input_value('Highlight Level Mix'),
+                    pyrpr.MATERIAL_INPUT_HIGHLIGHT2: self.get_input_value('Highlight Color'),
+
                 })
 
                 toon_shader.set_input(pyrpr.MATERIAL_INPUT_DIFFUSE_RAMP, ramp)
