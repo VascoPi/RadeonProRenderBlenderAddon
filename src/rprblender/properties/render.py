@@ -314,9 +314,15 @@ class RPR_RenderProperties(RPR_Properties):
     )
     texture_cache_dir: StringProperty(
         name='Texture Cache Dir',
-        description='Dirctory used for texture cache',
+        description='Directory used for texture cache',
         subtype='DIR_PATH',
         default=str(utils.package_root_dir() / ".tex_cache")
+    )
+    hipbin_dir: StringProperty(
+        name='Hip Kernels',
+        description='Directory used for precompiled HIP kernels',
+        subtype='DIR_PATH',
+        default=str(utils.package_root_dir() / "hipbin")
     )
 
     # RENDER LIMITS
@@ -580,6 +586,11 @@ class RPR_RenderProperties(RPR_Properties):
             context_props.extend([
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_VERTEX_MEMORY_SIZE, vertex_mem_size,
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_ACC_MEMORY_SIZE, acc_mem_size])
+
+        # Enable HIP / CUDA support for RPRContext2
+        if isinstance(rpr_context, context.RPRContext2):
+            hipbin = pyrpr.ffi.new('char[]', self.hipbin_dir.encode())  # path to precompiled HIP kernels
+            context_props.extend([pyrpr.CONTEXT_PRECOMPILED_BINARY_PATH, hipbin])
 
         #  this functionality requires additional memory on
         #  both CPU and GPU even when no per-face materials set in scene.
