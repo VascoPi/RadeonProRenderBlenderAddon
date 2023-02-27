@@ -38,18 +38,6 @@ def sorted_items(items:list):
     return items
 
 
-class RPR_NodeItem(NodeItem):
-    def __init__(self, nodetype, *, label=None, settings=None, poll=None, blender_version=None):
-        super().__init__(nodetype, label=label, settings=settings, poll=self._poll)
-        self.blender_version = blender_version
-        self.__poll = poll
-
-    def _poll(self, context):
-        result = self.__poll is None or context is None or self.poll(context)
-        result &= self.blender_version is None or eval(BLENDER_VERSION + self.blender_version)
-
-        return result
-
 node_categories = [
     RPR_ShaderNodeCategory('RPR_INPUT', "Input", items=sorted_items([
         NodeItem('ShaderNodeAmbientOcclusion'),
@@ -105,8 +93,9 @@ node_categories = [
         NodeItem('ShaderNodeBrightContrast'),
         NodeItem('ShaderNodeGamma'),
         NodeItem('ShaderNodeInvert'),
-        RPR_NodeItem("ShaderNodeMix", label="Mix Color", settings={"data_type": "'RGBA'"}, blender_version=">=3.4"),
-        RPR_NodeItem('ShaderNodeMixRGB', blender_version="<3.4"),
+        NodeItem("ShaderNodeMix", label="Mix Color",
+                 settings={"data_type": "'RGBA'"}, poll=lambda cls: BLENDER_VERSION >= "3.4"),
+        NodeItem('ShaderNodeMixRGB', poll=lambda cls: BLENDER_VERSION < "3.4"),
         NodeItem('ShaderNodeRGBCurve'),
         NodeItem('ShaderNodeHueSaturation'),
     ])),
@@ -127,13 +116,13 @@ node_categories = [
         NodeItem('ShaderNodeSeparateXYZ'),
         NodeItem('ShaderNodeVectorMath'),
         NodeItem('RPRValueNode_Math'),
-        RPR_NodeItem("ShaderNodeMix", blender_version=">=3.4"),
-        RPR_NodeItem('ShaderNodeSeparateColor', blender_version=">=3.3"),
-        RPR_NodeItem('ShaderNodeCombineColor', blender_version=">=3.3"),
-        RPR_NodeItem('ShaderNodeSeparateRGB', blender_version="<3.3"),
-        RPR_NodeItem('ShaderNodeSeparateHSV', blender_version="<3.3"),
-        RPR_NodeItem('ShaderNodeCombineRGB', blender_version="<3.3"),
-        RPR_NodeItem('ShaderNodeCombineHSV', blender_version="<3.3"),
+        NodeItem("ShaderNodeMix", poll=lambda cls: BLENDER_VERSION >= "3.4"),
+        NodeItem('ShaderNodeSeparateColor', poll=lambda cls: BLENDER_VERSION >= "3.3"),
+        NodeItem('ShaderNodeCombineColor', poll=lambda cls: BLENDER_VERSION >= "3.3"),
+        NodeItem('ShaderNodeSeparateRGB', poll=lambda cls: BLENDER_VERSION < "3.3"),
+        NodeItem('ShaderNodeSeparateHSV', poll=lambda cls: BLENDER_VERSION < "3.3"),
+        NodeItem('ShaderNodeCombineRGB', poll=lambda cls: BLENDER_VERSION < "3.3"),
+        NodeItem('ShaderNodeCombineHSV', poll=lambda cls: BLENDER_VERSION < "3.3"),
     ])),
     RPR_ShaderNodeCategory('Layout', "Layout", items=sorted_items([
         NodeItem('NodeReroute'),
