@@ -38,6 +38,10 @@ def core_cache_dir():
     return package_root_dir() / ".cache"
 
 
+def hipbin_dir():
+    return package_root_dir() / "hipbin"
+
+
 def blender_root_dir():
     if IS_MAC:
         return Path(sys.executable).parent / '../Resources'
