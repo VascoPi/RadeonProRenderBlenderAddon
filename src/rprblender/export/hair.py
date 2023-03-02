@@ -157,6 +157,9 @@ class CurveData:
             curves.points, 'radius', (len(curves.curves), points_length_max)
         )
 
+        uv_data = get_data_from_collection(
+            curves.attributes['surface_uv_coordinate'].data, 'vector', (len(curves.curves), 2)
+        )
         # check if radius the same for all control point,
         # in this case we generate radius for control points of one curve
         root_radius = points_radii[0][0]
@@ -172,7 +175,10 @@ class CurveData:
 
         data.points_radii = points_radii
 
-        data.uvs = None     # it is unavailable to get UVs from Blender
+        # print("Particle System", data.attributes[''])
+
+        data.uvs = uv_data     # it is unavailable to get UVs from Blender
+        # data.uvs = None
 
         return data
 

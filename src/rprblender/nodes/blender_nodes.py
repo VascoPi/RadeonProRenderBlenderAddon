@@ -2734,3 +2734,61 @@ class ShaderNodeBevel(NodeParser):
 
     def export_hybrid(self):
         return None
+
+
+class ShaderNodeHairInfo(NodeParser):
+    def export(self):
+        if self.socket_out.name == 'Intercept':
+            data = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
+                pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV,
+            })
+
+            rpr_node = (data.get_channel(2) / 0.666).clamp(0.0, 1.0)
+
+        else:
+            log.warn("Ignoring unsupported ", self.socket_out.name, self.node, self.material,
+                     "Default value will be used")
+
+            rpr_node = self.get_output_default()
+
+        return rpr_node
+
+
+class ShaderNodeAttribute(NodeParser):
+    def export(self):
+        attribute_type = self.node.attribute_type
+        attribute_name = self.node.attribute_name
+
+        if attribute_type == 'GEOMETRY':
+            obj = getattr(self.object, 'data', None)
+        else:
+            obj = self.object
+
+        if not obj:
+            return None
+
+        attributes = getattr(obj, 'attributes', None)
+        if not attributes:
+            return None
+
+        attr = attributes.get(attribute_name)
+        print(list(attributes.keys()), attribute_name, attr)
+        if not attr:
+            return None
+
+
+        val = getattr(attr.data[0], 'value', None)
+        print(val)
+        if not val:
+            return None
+
+        print(self.socket_out.name)
+        if self.socket_out.name == 'Fac':
+            rpr_node = self.node_item(val)
+
+        else:
+            log.warn("Ignoring unsupported ", self.socket_out.name, self.node, self.material,
+                     "Default value will be used")
+            rpr_node = self.node_item(val)
+
+        return rpr_node
