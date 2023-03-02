@@ -153,32 +153,24 @@ class CurveData:
                     data.points[i, j, :] = points[(points_index[i] + min(j, points_length[i] - 1)), :]
 
         # get radius for all control point
-        points_radii = get_data_from_collection(
-            curves.points, 'radius', (len(curves.curves), points_length_max)
-        )
+        points_radii = get_data_from_collection(curves.points, 'radius', (len(curves.curves), points_length_max))
 
-        uv_data = get_data_from_collection(
-            curves.attributes['surface_uv_coordinate'].data, 'vector', (len(curves.curves), 2)
-        )
         # check if radius the same for all control point,
         # in this case we generate radius for control points of one curve
-        root_radius = points_radii[0][0]
-        if np.all(points_radii == root_radius):
-            # setting curve root radius same as in Cycles
-            if root_radius == 0:
-                root_radius = 0.005
-
-            tip_radius = root_radius / 2
-            points_radii = np.fromiter(
-                (root_radius + (tip_radius - root_radius) * i / (points_length_max - 1)
-                 for i in range(points_length_max)), dtype=np.float32)
+        radius = points_radii[0][0]
+        if np.all(points_radii == radius):
+            radius = radius if radius == 0 else 0.005  # setting curve root radius same as in Cycles
+            points_radii = np.full(points_length_max, radius, dtype=np.float32)
 
         data.points_radii = points_radii
 
-        # print("Particle System", data.attributes[''])
+        uv_data = None
+        if hasattr(curves.attributes, 'surface_uv_coordinate'):
+            uv_data = get_data_from_collection(
+                curves.attributes['surface_uv_coordinate'].data, 'vector', (len(curves.curves), 2)
+            )
 
         data.uvs = uv_data     # it is unavailable to get UVs from Blender
-        # data.uvs = None
 
         return data
 
