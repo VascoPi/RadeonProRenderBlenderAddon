@@ -2791,7 +2791,8 @@ class ShaderNodeBevel(NodeParser):
 
 class ShaderNodeHairInfo(NodeParser):
     def export(self):
-        if self.socket_out.name == 'Intercept':
+        out_socket_name = self.socket_out.name
+        if out_socket_name == 'Intercept':
             data = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
                 pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV,
             })
@@ -2799,7 +2800,7 @@ class ShaderNodeHairInfo(NodeParser):
             # The value of 0.7 was manually selected in order to correspond the result achieved by Cycles.
             rpr_node = (data.get_channel(2) / 0.7).clamp(0.0, 1.0)
 
-        elif self.socket_out.name == 'Random':
+        elif out_socket_name == 'Random':
             data = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
                 pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_PRIMITIVE_RANDOM_COLOR,
             })
@@ -2809,9 +2810,17 @@ class ShaderNodeHairInfo(NodeParser):
         else:
             # TODO add more outputs using primvar, at the moment core 3.01.00 doesn't support it for rpr_curve
             # Is Strand, Length, Thickness, Tangent Normal
-            log.warn("Ignoring unsupported ", self.socket_out.name, self.node, self.material,
+            log.warn("Ignoring unsupported ", out_socket_name, self.node, self.material,
                      "Default value will be used")
 
             return None
 
         return rpr_node
+
+    def export_hybrid(self):
+        out_socket_name = self.socket_out.name
+        if out_socket_name in ("Is Strand", "Length", "Thickness", "Tangent Normal", "Random"):
+            log.warn(f"Ignoring unsupported Output Socket", out_socket_name, self.node, self.material)
+            return None
+
+        return self.export()
