@@ -2799,9 +2799,16 @@ class ShaderNodeHairInfo(NodeParser):
             # The value of 0.7 was manually selected in order to correspond the result achieved by Cycles.
             rpr_node = (data.get_channel(2) / 0.7).clamp(0.0, 1.0)
 
+        elif self.socket_out.name == 'Random':
+            data = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
+                pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_PRIMITIVE_RANDOM_COLOR,
+            })
+
+            rpr_node = data.get_channel(0)
+
         else:
             # TODO add more outputs using primvar, at the moment core 3.01.00 doesn't support it for rpr_curve
-            # Is Strand, Length, Thickness, Tangent Normal, Random
+            # Is Strand, Length, Thickness, Tangent Normal
             log.warn("Ignoring unsupported ", self.socket_out.name, self.node, self.material,
                      "Default value will be used")
 
