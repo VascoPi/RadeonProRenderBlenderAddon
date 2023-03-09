@@ -1633,7 +1633,6 @@ class RPRShaderNodeToon(RPRShaderNode):
         items=(
             ('THREE_COLORS', "Three Colors", "Use three color ramp."),
             ('FIVE_COLORS', "Five Colors", "Use five color ramp"),
-
         ),
         default='THREE_COLORS',
         update=advanced_changed
