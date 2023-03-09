@@ -1577,9 +1577,6 @@ class RPRShaderNodeToon(RPRShaderNode):
 
     def advanced_changed(self, context):
         ramp_sockets = [
-            "Shadow Color",
-            "Mid Shadow Level",
-            "Mid Shadow Level Mix",
             "Mid Shadow Color",
             "Mid Level",
             "Mid Level Mix",
@@ -1587,6 +1584,12 @@ class RPRShaderNodeToon(RPRShaderNode):
             "Mid Highlight Level",
             "Mid Highlight Level Mix",
             "Mid Highlight Color",
+        ]
+
+        ramp_five_sockets = [
+            "Shadow Color",
+            "Mid Shadow Level",
+            "Mid Shadow Level Mix",
             "Highlight Level",
             "Highlight Level Mix",
             "Highlight Color",
@@ -1594,6 +1597,11 @@ class RPRShaderNodeToon(RPRShaderNode):
 
         for socket in ramp_sockets:
             self.inputs[socket].enabled = self.show_advanced
+
+        for socket in ramp_five_sockets:
+            self.inputs[socket].enabled = self.show_advanced and self.ramp_mode == 'FIVE_COLORS'
+
+        self.width = 310.0 if self.show_advanced else 140.0
 
         # update node
         self.socket_value_update(context)
@@ -1618,6 +1626,17 @@ class RPRShaderNodeToon(RPRShaderNode):
         name="Linked Light",
         description="Link one light from the scene to lit the material",
         update=advanced_changed, poll=poll_light
+    )
+
+    ramp_mode: bpy.props.EnumProperty(
+        name='Ramp Mode',
+        items=(
+            ('THREE_COLORS', "Three Colors", "Use three color ramp."),
+            ('FIVE_COLORS', "Five Colors", "Use five color ramp"),
+
+        ),
+        default='THREE_COLORS',
+        update=advanced_changed
     )
 
     def init(self, context):
@@ -1688,6 +1707,7 @@ class RPRShaderNodeToon(RPRShaderNode):
         if self.show_advanced:
             col.prop(self, 'mid_color_as_albedo')
             col.prop(self, 'linked_light')
+            col.prop(self, 'ramp_mode')
 
     class Exporter(RuleNodeParser):
         def export(self):
@@ -1703,15 +1723,9 @@ class RPRShaderNodeToon(RPRShaderNode):
             if self.node.show_advanced:
                 # build the toon ramp node
                 ramp = self.create_node(pyrpr.MATERIAL_NODE_TOON_RAMP, {
-                    pyrpr.MATERIAL_INPUT_TOON_5_COLORS: True,
                     pyrpr.MATERIAL_INPUT_INTERPOLATION: pyrpr.INTERPOLATION_MODE_LINEAR,
 
-                    # Shadow
-                    pyrpr.MATERIAL_INPUT_SHADOW2: self.get_input_value('Shadow Color'),
-
                     # Mid Shadow
-                    pyrpr.MATERIAL_INPUT_POSITION_SHADOW: self.get_input_value('Mid Shadow Level'),
-                    pyrpr.MATERIAL_INPUT_RANGE_SHADOW: self.get_input_value('Mid Shadow Level Mix'),
                     pyrpr.MATERIAL_INPUT_SHADOW: self.get_input_value('Mid Shadow Color'),
 
                     # Mid
@@ -1724,12 +1738,20 @@ class RPRShaderNodeToon(RPRShaderNode):
                     pyrpr.MATERIAL_INPUT_RANGE2: self.get_input_value('Mid Highlight Level Mix'),
                     pyrpr.MATERIAL_INPUT_HIGHLIGHT: self.get_input_value('Mid Highlight Color'),
 
-                    # Highlight
-                    pyrpr.MATERIAL_INPUT_POSITION_HIGHLIGHT: self.get_input_value('Highlight Level'),
-                    pyrpr.MATERIAL_INPUT_RANGE_HIGHLIGHT: self.get_input_value('Highlight Level Mix'),
-                    pyrpr.MATERIAL_INPUT_HIGHLIGHT2: self.get_input_value('Highlight Color'),
-
                 })
+
+                if self.node.ramp_mode == "FIVE_COLORS":
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_TOON_5_COLORS, True)
+
+                    # Shadow
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_SHADOW2, self.get_input_value('Shadow Color'))
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_POSITION_SHADOW, self.get_input_value('Mid Shadow Level'))
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_RANGE_SHADOW, self.get_input_value('Mid Shadow Level Mix'))
+
+                    # Highlight
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_POSITION_HIGHLIGHT, self.get_input_value('Highlight Level'))
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_RANGE_HIGHLIGHT, self.get_input_value('Highlight Level Mix'))
+                    ramp.set_input(pyrpr.MATERIAL_INPUT_HIGHLIGHT2, self.get_input_value('Highlight Color'))
 
                 toon_shader.set_input(pyrpr.MATERIAL_INPUT_DIFFUSE_RAMP, ramp)
 
