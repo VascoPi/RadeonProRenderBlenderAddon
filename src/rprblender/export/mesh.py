@@ -344,6 +344,14 @@ def sync_visibility(rpr_context, obj: bpy.types.Object, rpr_shape: pyrpr.Shape, 
         rpr_shape.set_portal_light(False)
 
 
+def mesh_key(obj: bpy.types.Object):
+    ''' Generates a unique key for an object mesh based on the modifiers'''
+    if obj.type == 'MESH':
+        return id(obj.data)
+
+    return obj.name_full
+
+
 def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     """ Creates pyrpr.Shape from obj.data:bpy.types.Mesh """
 
@@ -354,45 +362,52 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     indirect_only = kwargs.get("indirect_only", False)
     log("sync", mesh, obj, "IndirectOnly" if indirect_only else "")
 
-    obj_key = object.key(obj)
-    data = MeshData.init_from_mesh(mesh, obj=obj)
-    if not data:
-        rpr_context.create_empty_object(obj_key)
-        return
-
+    mesh_key = key(obj)
     transform = object.get_transform(obj)
-    deformation_data = rpr_context.deformation_cache.get(obj_key)
+    deformation_data = rpr_context.deformation_cache.get(mesh_key)
 
-    if smoke_modifier and isinstance(rpr_context, RPRContext2):
-        transform = volume.get_transform(obj)
-        rpr_shape = rpr_context.create_mesh(
-            obj_key,
-            None, None, None,
-            None, None, None,
-            None,
-            {pyrpr.MESH_VOLUME_FLAG: 1}
-        )
+    rpr_mesh = rpr_context.object.get(mesh_key, None)
 
-    elif deformation_data and np.any(data.vertices != deformation_data.vertices) and \
-            np.any(data.normals != deformation_data.normals):
-        vertices = np.concatenate((data.vertices, deformation_data.vertices))
-        normals = np.concatenate((data.normals, deformation_data.normals))
-        rpr_shape = rpr_context.create_mesh(
-            obj_key,
-            np.ascontiguousarray(vertices), np.ascontiguousarray(normals), data.uvs,
-            data.vertex_indices, data.normal_indices, data.uv_indices,
-            data.num_face_vertices,
-            {pyrpr.MESH_MOTION_DIMENSION: 2}
-        )
+    if rpr_mesh:
+        # shape already exists create instance
+        rpr_shape = rpr_context.create_instance(mesh_key, rpr_mesh)
     else:
-        rpr_shape = rpr_context.create_mesh(
-            obj_key,
-            data.vertices, data.normals, data.uvs,
-            data.vertex_indices, data.normal_indices, data.uv_indices,
-            data.num_face_vertices
-        )
+        # create a new mesh object in RPR
+        data = MeshData.init_from_mesh(mesh, obj=obj)
+        if not data:
+            rpr_context.create_empty_object(mesh_key)
+            return
 
-    rpr_shape.set_name(obj_key)
+        if smoke_modifier and isinstance(rpr_context, RPRContext2):
+            transform = volume.get_transform(obj)
+            rpr_shape = rpr_context.create_mesh(
+                mesh_key,
+                None, None, None,
+                None, None, None,
+                None,
+                {pyrpr.MESH_VOLUME_FLAG: 1}
+            )
+
+        elif deformation_data and np.any(data.vertices != deformation_data.vertices) and \
+                np.any(data.normals != deformation_data.normals):
+            vertices = np.concatenate((data.vertices, deformation_data.vertices))
+            normals = np.concatenate((data.normals, deformation_data.normals))
+            rpr_shape = rpr_context.create_mesh(
+                mesh_key,
+                np.ascontiguousarray(vertices), np.ascontiguousarray(normals), data.uvs,
+                data.vertex_indices, data.normal_indices, data.uv_indices,
+                data.num_face_vertices,
+                {pyrpr.MESH_MOTION_DIMENSION: 2}
+            )
+        else:
+            rpr_shape = rpr_context.create_mesh(
+                mesh_key,
+                data.vertices, data.normals, data.uvs,
+                data.vertex_indices, data.normal_indices, data.uv_indices,
+                data.num_face_vertices
+            )
+
+    rpr_shape.set_name(obj.name)
     rpr_shape.set_id(obj.pass_index)
     rpr_context.set_aov_index_lookup(obj.pass_index, obj.pass_index,
                                      obj.pass_index, obj.pass_index, 1.0)
@@ -405,7 +420,7 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     rpr_context.scene.attach(rpr_shape)
 
     rpr_shape.set_transform(transform)
-    object.export_motion_blur(rpr_context, obj_key, transform)
+    object.export_motion_blur(rpr_context, object.key(obj), transform)
 
     sync_visibility(rpr_context, obj, rpr_shape, indirect_only=indirect_only)
 
