@@ -1574,9 +1574,10 @@ class RPRValueNode_Math(RPRShaderNode):
 class RPRShaderNodeToon(RPRShaderNode):
     ''' A toon shader using both the RPR Toon Shader and Ramp node '''
     bl_label = 'RPR Toon'
+    bl_width_min = 310  # for better fit of ramp mode and linked light selector
 
-    def advanced_changed(self, context):
-        ramp_sockets = [
+    def ramp_mode_changed(self, context):
+        ramp_three_sockets = [
             "Mid Shadow Color",
             "Mid Level",
             "Mid Level Mix",
@@ -1595,13 +1596,11 @@ class RPRShaderNodeToon(RPRShaderNode):
             "Highlight Color",
         ]
 
-        for socket in ramp_sockets:
-            self.inputs[socket].enabled = self.show_advanced
+        for socket in ramp_three_sockets:
+            self.inputs[socket].enabled = self.ramp_mode in ('3_COLOR', '5_COLOR')
 
         for socket in ramp_five_sockets:
-            self.inputs[socket].enabled = self.show_advanced and self.ramp_mode == 'FIVE_COLORS'
-
-        self.width = 310.0 if self.show_advanced else 140.0
+            self.inputs[socket].enabled = self.ramp_mode == '5_COLOR'
 
         # update node
         self.socket_value_update(context)
@@ -1609,33 +1608,28 @@ class RPRShaderNodeToon(RPRShaderNode):
     def poll_light(self, obj):
         return obj.type == 'LIGHT' and obj.users
 
-    show_advanced: BoolProperty(
-        name="Advanced",
-        default=False,
-        description="Show advanced settings",
-        update=advanced_changed
-    )
     mid_color_as_albedo: BoolProperty(
         name="Mid Color as Albedo",
         default=False,
         description="Show the Mid Color on Albedo AOV instead of Color",
-        update=advanced_changed
+        update=ramp_mode_changed
     )
     linked_light: bpy.props.PointerProperty(
         type=bpy.types.Object,
         name="Linked Light",
         description="Link one light from the scene to lit the material",
-        update=advanced_changed, poll=poll_light
+        update=ramp_mode_changed, poll=poll_light
     )
 
     ramp_mode: bpy.props.EnumProperty(
         name='Ramp Mode',
         items=(
-            ('THREE_COLORS', "Three Colors", "Use three color ramp."),
-            ('FIVE_COLORS', "Five Colors", "Use five color ramp"),
+            ('1_COLOR', "1 color", "Use solid color."),
+            ('3_COLOR', "3 color", "Use three color ramp."),
+            ('5_COLOR', "5 color", "Use five color ramp"),
         ),
-        default='THREE_COLORS',
-        update=advanced_changed
+        default='1_COLOR',
+        update=ramp_mode_changed
     )
 
     def init(self, context):
@@ -1701,12 +1695,11 @@ class RPRShaderNodeToon(RPRShaderNode):
 
     def draw_buttons(self, context, layout):
         col = layout.column()
+        col.prop(self, 'linked_light')
+        col.prop(self, 'ramp_mode')
 
-        col.prop(self, 'show_advanced')
-        if self.show_advanced:
+        if self.ramp_mode in ('3_COLOR', '5_COLOR'):
             col.prop(self, 'mid_color_as_albedo')
-            col.prop(self, 'linked_light')
-            col.prop(self, 'ramp_mode')
 
     class Exporter(RuleNodeParser):
         def export(self):
@@ -1719,8 +1712,11 @@ class RPRShaderNodeToon(RPRShaderNode):
             if normal:
                 toon_shader.set_input(pyrpr.MATERIAL_INPUT_NORMAL, normal)
 
-            if self.node.show_advanced:
-                # build the toon ramp node
+            # build the toon ramp node
+            if self.node.ramp_mode in ('3_COLOR', '5_COLOR'):
+                if self.node.mid_color_as_albedo:
+                    toon_shader.set_input(pyrpr.MATERIAL_INPUT_MID_IS_ALBEDO, True)
+
                 ramp = self.create_node(pyrpr.MATERIAL_NODE_TOON_RAMP, {
                     pyrpr.MATERIAL_INPUT_INTERPOLATION: pyrpr.INTERPOLATION_MODE_LINEAR,
 
@@ -1739,7 +1735,7 @@ class RPRShaderNodeToon(RPRShaderNode):
 
                 })
 
-                if self.node.ramp_mode == "FIVE_COLORS":
+                if self.node.ramp_mode == '5_COLOR':
                     ramp.set_input(pyrpr.MATERIAL_INPUT_TOON_5_COLORS, True)
 
                     # Shadow
@@ -1754,22 +1750,19 @@ class RPRShaderNodeToon(RPRShaderNode):
 
                 toon_shader.set_input(pyrpr.MATERIAL_INPUT_DIFFUSE_RAMP, ramp)
 
-                if self.node.mid_color_as_albedo:
-                    toon_shader.set_input(pyrpr.MATERIAL_INPUT_MID_IS_ALBEDO, True)
+            if self.node.linked_light:
+                # now we can't set Area light (emissive object) to it but only light object
+                if self.node.linked_light.data.type != 'AREA':
+                    # we sync light here because there are cases
+                    # the light isn't in rpr_context yet
+                    rpr_light = light.sync(self.rpr_context, self.node.linked_light)
+                    if rpr_light:
+                        toon_shader.set_input(pyrpr.MATERIAL_INPUT_LIGHT, rpr_light)
 
-                if self.node.linked_light:
-                    # now we can't set Area light (emissive object) to it but only light object
-                    if self.node.linked_light.data.type != 'AREA':
-                        # we sync light here because there are cases
-                        # the light isn't in rpr_context yet
-                        rpr_light = light.sync(self.rpr_context, self.node.linked_light)
-                        if rpr_light:
-                            toon_shader.set_input(pyrpr.MATERIAL_INPUT_LIGHT, rpr_light)
-
-                    else:
-                        log.warn(
-                            "Ignoring unsupported Light type", self.node.linked_light.data.type
-                        )
+                else:
+                    log.warn(
+                        "Ignoring unsupported Light type", self.node.linked_light.data.type
+                    )
 
             transparency = self.get_input_value('Transparency')
             if not transparency.is_zero():
