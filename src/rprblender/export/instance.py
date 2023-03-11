@@ -45,7 +45,7 @@ def sync(rpr_context, instance: bpy.types.DepsgraphObjectInstance, **kwargs):
             # Instance of this object exists, but object itself isn't visible on the scene.
             # In this case we do additional object export and set visibility to False
             object.sync(rpr_context, obj, **kwargs)
-            rpr_mesh = rpr_context.objects[obj_key]
+            rpr_mesh = rpr_context.objects.get(obj_key, None)
             if not rpr_mesh:
                 return
             rpr_mesh.set_visibility(False)

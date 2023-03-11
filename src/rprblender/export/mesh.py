@@ -343,13 +343,8 @@ def sync_visibility(rpr_context, obj: bpy.types.Object, rpr_shape: pyrpr.Shape, 
         rpr_shape.set_light_group_id(3)
         rpr_shape.set_portal_light(False)
 
-
-def mesh_key(obj: bpy.types.Object):
-    ''' Generates a unique key for an object mesh based on the modifiers'''
-    if obj.type == 'MESH':
-        return id(obj.data)
-
-    return obj.name_full
+def key(obj: bpy.types.Object):
+    return obj.data.name+obj.name if len(obj.modifiers) else obj.data.name
 
 
 def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
@@ -358,29 +353,28 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     mesh = kwargs.get("mesh", obj.data)
     material_override = kwargs.get("material_override", None)
     smoke_modifier = volume.get_smoke_modifier(obj)
-
+    
     indirect_only = kwargs.get("indirect_only", False)
     log("sync", mesh, obj, "IndirectOnly" if indirect_only else "")
-
-    mesh_key = key(obj)
+    
+    obj_key = object.key(obj)
     transform = object.get_transform(obj)
-    deformation_data = rpr_context.deformation_cache.get(mesh_key)
 
-    rpr_mesh = rpr_context.object.get(mesh_key, None)
-
-    if rpr_mesh:
-        # shape already exists create instance
-        rpr_shape = rpr_context.create_instance(mesh_key, rpr_mesh)
-    else:
-        # create a new mesh object in RPR
+    # the mesh key is used to find duplicated mesh data
+    mesh_key = key(obj)
+    # get mesh from cache if already created.  
+    rpr_mesh = rpr_context.meshes.get(mesh_key, None)
+    if rpr_mesh is None:
         data = MeshData.init_from_mesh(mesh, obj=obj)
         if not data:
-            rpr_context.create_empty_object(mesh_key)
+            rpr_context.create_empty_object(obj_key)
             return
+
+        deformation_data = rpr_context.deformation_cache.get(obj_key)
 
         if smoke_modifier and isinstance(rpr_context, RPRContext2):
             transform = volume.get_transform(obj)
-            rpr_shape = rpr_context.create_mesh(
+            rpr_mesh = rpr_context.create_mesh(
                 mesh_key,
                 None, None, None,
                 None, None, None,
@@ -392,7 +386,7 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
                 np.any(data.normals != deformation_data.normals):
             vertices = np.concatenate((data.vertices, deformation_data.vertices))
             normals = np.concatenate((data.normals, deformation_data.normals))
-            rpr_shape = rpr_context.create_mesh(
+            rpr_mesh = rpr_context.create_mesh(
                 mesh_key,
                 np.ascontiguousarray(vertices), np.ascontiguousarray(normals), data.uvs,
                 data.vertex_indices, data.normal_indices, data.uv_indices,
@@ -400,27 +394,36 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
                 {pyrpr.MESH_MOTION_DIMENSION: 2}
             )
         else:
-            rpr_shape = rpr_context.create_mesh(
+            rpr_mesh = rpr_context.create_mesh(
                 mesh_key,
                 data.vertices, data.normals, data.uvs,
                 data.vertex_indices, data.normal_indices, data.uv_indices,
                 data.num_face_vertices
             )
 
-    rpr_shape.set_name(obj.name)
+        if data.vertex_colors is not None:
+            rpr_mesh.set_vertex_colors(data.vertex_colors)
+
+        # mesh needs to be attached to the scene for instances to work
+        rpr_context.scene.attach(rpr_mesh)
+        rpr_mesh.set_visibility(False)
+
+    
+    # create an instance of the mesh
+    rpr_shape = rpr_context.create_instance(obj_key, rpr_mesh)
+    rpr_shape.set_name(obj_key)
     rpr_shape.set_id(obj.pass_index)
     rpr_context.set_aov_index_lookup(obj.pass_index, obj.pass_index,
                                      obj.pass_index, obj.pass_index, 1.0)
 
-    if data.vertex_colors is not None:
-        rpr_shape.set_vertex_colors(data.vertex_colors)
+    
 
     assign_materials(rpr_context, rpr_shape, obj, material_override)
 
     rpr_context.scene.attach(rpr_shape)
 
     rpr_shape.set_transform(transform)
-    object.export_motion_blur(rpr_context, object.key(obj), transform)
+    object.export_motion_blur(rpr_context, obj_key, transform)
 
     sync_visibility(rpr_context, obj, rpr_shape, indirect_only=indirect_only)
 
