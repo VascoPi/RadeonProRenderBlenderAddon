@@ -62,7 +62,7 @@ class RPRContext:
         # scene and objects
         self.scene = None
         self.objects = {}
-        self.meshes = {}
+        self.mesh_masters = {}
         self.object_hashes = {}
         self.curves = {}
         self.volumes = {}
@@ -455,7 +455,7 @@ class RPRContext:
             num_face_vertices,
             mesh_info
         )
-        self.meshes[key] = mesh
+        self.objects[key] = mesh
         return mesh
 
     def create_instance(self, key, mesh):

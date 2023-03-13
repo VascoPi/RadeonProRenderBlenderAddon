@@ -361,10 +361,13 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     transform = object.get_transform(obj)
 
     # the mesh key is used to find duplicated mesh data
-    mesh_key = key(obj)
-    # get mesh from cache if already created.  
-    rpr_mesh = rpr_context.meshes.get(mesh_key, None)
-    if rpr_mesh is None:
+    mesh_key = obj.data.name
+    is_potential_instance = len(obj.modifiers) == 0
+    
+    if is_potential_instance and mesh_key in rpr_context.mesh_masters:
+        rpr_mesh = rpr_context.mesh_masters[mesh_key]
+        rpr_shape = rpr_context.create_instance(obj_key, rpr_mesh)
+    else:
         data = MeshData.init_from_mesh(mesh, obj=obj)
         if not data:
             rpr_context.create_empty_object(obj_key)
@@ -374,8 +377,8 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
 
         if smoke_modifier and isinstance(rpr_context, RPRContext2):
             transform = volume.get_transform(obj)
-            rpr_mesh = rpr_context.create_mesh(
-                mesh_key,
+            rpr_shape = rpr_context.create_mesh(
+                obj_key,
                 None, None, None,
                 None, None, None,
                 None,
@@ -386,31 +389,30 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
                 np.any(data.normals != deformation_data.normals):
             vertices = np.concatenate((data.vertices, deformation_data.vertices))
             normals = np.concatenate((data.normals, deformation_data.normals))
-            rpr_mesh = rpr_context.create_mesh(
-                mesh_key,
+            rpr_shape = rpr_context.create_mesh(
+                obj_key,
                 np.ascontiguousarray(vertices), np.ascontiguousarray(normals), data.uvs,
                 data.vertex_indices, data.normal_indices, data.uv_indices,
                 data.num_face_vertices,
                 {pyrpr.MESH_MOTION_DIMENSION: 2}
             )
         else:
-            rpr_mesh = rpr_context.create_mesh(
-                mesh_key,
+            rpr_shape = rpr_context.create_mesh(
+                obj_key,
                 data.vertices, data.normals, data.uvs,
                 data.vertex_indices, data.normal_indices, data.uv_indices,
                 data.num_face_vertices
             )
 
         if data.vertex_colors is not None:
-            rpr_mesh.set_vertex_colors(data.vertex_colors)
+            rpr_shape.set_vertex_colors(data.vertex_colors)
 
-        # mesh needs to be attached to the scene for instances to work
-        rpr_context.scene.attach(rpr_mesh)
-        rpr_mesh.set_visibility(False)
+        # add mesh to masters
+        if is_potential_instance:
+            rpr_context.mesh_masters[mesh_key] = rpr_shape
 
     
     # create an instance of the mesh
-    rpr_shape = rpr_context.create_instance(obj_key, rpr_mesh)
     rpr_shape.set_name(obj_key)
     rpr_shape.set_id(obj.pass_index)
     rpr_context.set_aov_index_lookup(obj.pass_index, obj.pass_index,
