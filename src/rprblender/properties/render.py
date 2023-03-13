@@ -34,6 +34,7 @@ from bpy.props import (
 )
 import platform
 
+from rprblender import config
 from rprblender import utils
 from rprblender.utils.user_settings import get_user_settings, on_settings_changed
 from . import RPR_Properties
@@ -232,6 +233,14 @@ class RPR_UserSettings(bpy.types.PropertyGroup):
         update=on_settings_changed,
     )
 
+    use_opencl: BoolProperty(
+        name="Use OpenCL",
+        description="Use OpenCl kernels for Final, "
+                    "Viewport and Material Preview render otherwise HIP kernel is used",
+        default=config.use_opencl,
+        update=on_settings_changed,
+    )
+
     bake_resolution: EnumProperty(
         name="Texture Resolution",
         description="Texture resolution to use for nodes baking",
@@ -314,7 +323,7 @@ class RPR_RenderProperties(RPR_Properties):
     )
     texture_cache_dir: StringProperty(
         name='Texture Cache Dir',
-        description='Dirctory used for texture cache',
+        description='Directory used for texture cache',
         subtype='DIR_PATH',
         default=str(utils.package_root_dir() / ".tex_cache")
     )
@@ -551,6 +560,7 @@ class RPR_RenderProperties(RPR_Properties):
         log("Syncing scene: %s" % scene.name)
 
         devices = self.get_devices(is_final_engine)
+        settings = get_user_settings()
 
         context_flags = set()
         # enable CMJ sampler for adaptive sampling
@@ -567,6 +577,9 @@ class RPR_RenderProperties(RPR_Properties):
                 if use_gl_interop:
                     context_flags |= {pyrpr.CREATION_FLAGS_ENABLE_GL_INTEROP}
 
+                if settings.use_opencl:
+                    context_flags |= {pyrpr.CREATION_FLAGS_ENABLE_OPENCL}
+
                 if not metal_enabled and platform.system() == 'Darwin'\
                         and not isinstance(rpr_context, context.RPRContext2):
                     # only enable metal once and if a GPU is turned on
@@ -580,6 +593,11 @@ class RPR_RenderProperties(RPR_Properties):
             context_props.extend([
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_VERTEX_MEMORY_SIZE, vertex_mem_size,
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_ACC_MEMORY_SIZE, acc_mem_size])
+
+        # Enable HIP / CUDA support for RPRContext2
+        if isinstance(rpr_context, context.RPRContext2) and not settings.use_opencl:
+            hipbin_dir = pyrpr.ffi.new('char[]', str(utils.hipbin_dir()).encode())  # path to precompiled HIP kernels
+            context_props.extend([pyrpr.CONTEXT_PRECOMPILED_BINARY_PATH, hipbin_dir])
 
         #  this functionality requires additional memory on
         #  both CPU and GPU even when no per-face materials set in scene.
