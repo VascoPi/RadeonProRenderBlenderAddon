@@ -343,9 +343,6 @@ def sync_visibility(rpr_context, obj: bpy.types.Object, rpr_shape: pyrpr.Shape, 
         rpr_shape.set_light_group_id(3)
         rpr_shape.set_portal_light(False)
 
-def key(obj: bpy.types.Object):
-    return obj.data.name+obj.name if len(obj.modifiers) else obj.data.name
-
 
 def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     """ Creates pyrpr.Shape from obj.data:bpy.types.Mesh """
@@ -364,6 +361,8 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     mesh_key = obj.data.name
     is_potential_instance = len(obj.modifiers) == 0
     
+    # if an object has no modifiers it could potentially instance a mesh
+    # instead of exporting a new one
     if is_potential_instance and mesh_key in rpr_context.mesh_masters:
         rpr_mesh = rpr_context.mesh_masters[mesh_key]
         rpr_shape = rpr_context.create_instance(obj_key, rpr_mesh)
@@ -407,11 +406,10 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
         if data.vertex_colors is not None:
             rpr_shape.set_vertex_colors(data.vertex_colors)
 
-        # add mesh to masters
+        # add mesh to masters if no modifiers
         if is_potential_instance:
             rpr_context.mesh_masters[mesh_key] = rpr_shape
 
-    
     # create an instance of the mesh
     rpr_shape.set_name(obj_key)
     rpr_shape.set_id(obj.pass_index)
