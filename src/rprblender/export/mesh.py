@@ -350,10 +350,10 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     mesh = kwargs.get("mesh", obj.data)
     material_override = kwargs.get("material_override", None)
     smoke_modifier = volume.get_smoke_modifier(obj)
-    
+
     indirect_only = kwargs.get("indirect_only", False)
     log("sync", mesh, obj, "IndirectOnly" if indirect_only else "")
-    
+
     obj_key = object.key(obj)
     transform = object.get_transform(obj)
 
