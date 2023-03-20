@@ -39,7 +39,13 @@ def core_cache_dir():
 
 
 def hipbin_dir():
-    return package_root_dir() / "hipbin"
+    if IS_DEBUG_MODE:
+        hipdir = package_root_dir().parent.parent / '.sdk/rpr/hipbin'
+
+    else:
+        hipdir = package_root_dir() / "hipbin"
+
+    return hipdir
 
 
 def blender_root_dir():

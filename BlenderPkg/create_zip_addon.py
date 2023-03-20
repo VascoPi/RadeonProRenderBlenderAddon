@@ -53,8 +53,7 @@ def enumerate_addon_data():
         if not f.is_file() or f.name in ("configdev.py", "rprblender.log"):
             continue
 
-        if f.name.endswith(('.py', '.ocio', '.spi1d', '.spi3d', '.spimtx', 'cudabin', 'hipbin', 'hipcuda', 'json'))\
-                or f.name in ('athena.bin', 'EULA.html', 'AllPreCompilations.json'):
+        if f.name.endswith(('.py', '.ocio', '.spi1d', '.spi3d', '.spimtx')) or f.name in ('athena.bin', 'EULA.html'):
             yield f, f.relative_to(rprblender_dir)
 
     # copying Core libs
@@ -70,6 +69,12 @@ def enumerate_addon_data():
     for f in models_dir.glob("**/*"):
         if f.is_file():
             yield f, Path("data/models") / f.relative_to(models_dir)
+
+    # copying HIP/CUDA precompiled kernels
+    hipbin = repo_dir / ".sdk/rpr/hipbin"
+    for lib in hipbin.glob("*"):
+        if lib.is_file() and lib.suffix in (".cudabin", ".hipbin", ".json"):
+            yield lib, Path("hipbin") / lib.relative_to(hipbin)
 
 
 def get_version():
