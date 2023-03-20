@@ -94,6 +94,8 @@ def sync_update(rpr_context: RPRContext, instance: bpy.types.DepsgraphObjectInst
     if is_updated_transform:
         rpr_shape.set_transform(object.get_transform(instance))
 
+    return True
+
 
 def cache_blur_data(rpr_context, inst: bpy.types.DepsgraphObjectInstance):
     if inst.parent.rpr.motion_blur:
