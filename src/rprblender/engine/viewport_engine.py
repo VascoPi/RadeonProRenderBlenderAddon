@@ -113,7 +113,7 @@ class ViewportSettings:
 
         # getting render resolution and render border
         width, height = x2 - x1, y2 - y1
-        self.border = (x1, y1), (width, height)
+        self.border = (x1, y1), (max(width, 1), max(height, 1))
 
     def export_camera(self, rpr_camera):
         """Exports camera settings with render border"""
@@ -419,24 +419,25 @@ class ViewportEngine(Engine):
             # notifying viewport that rendering is finished
             if is_last_iteration:
                 with self.render_lock:
-                    if self.image_filter:
-                        # applying denoising
-                        self._resolve()
-                        self.update_image_filter_inputs()
-                        self.image_filter.run()
-                        self.denoised_image = self.image_filter.get_data()
+                    if self.width > 1 and self.height > 1:
+                        if self.image_filter:
+                            # applying denoising
+                            self._resolve()
+                            self.update_image_filter_inputs()
+                            self.image_filter.run()
+                            self.denoised_image = self.image_filter.get_data()
 
-                        if self.upscale_filter:
-                            self.upscale_filter.update_input('color', self.denoised_image)
+                            if self.upscale_filter:
+                                self.upscale_filter.update_input('color', self.denoised_image)
+                                self.upscale_filter.run()
+                                self.upscaled_image = self.upscale_filter.get_data()
+
+                        elif self.upscale_filter:
+                            self._resolve()
+                            color = self.rpr_context.get_image()
+                            self.upscale_filter.update_input('color', color)
                             self.upscale_filter.run()
                             self.upscaled_image = self.upscale_filter.get_data()
-
-                    elif self.upscale_filter:
-                        self._resolve()
-                        color = self.rpr_context.get_image()
-                        self.upscale_filter.update_input('color', color)
-                        self.upscale_filter.run()
-                        self.upscaled_image = self.upscale_filter.get_data()
 
                 time_render = time.perf_counter() - time_begin
                 info_str = f"Time: {time_render:.1f} sec | Iteration: {iteration}"
@@ -937,7 +938,7 @@ class ViewportEngine(Engine):
     def _get_resolution(self, vs=None):
         if not vs:
             vs = self.viewport_settings
-        if self.upscale_filter:
+        if self.upscale_filter and vs.width > 1 and vs.height > 1:
             return vs.width // 2, vs.height // 2
 
         return vs.width, vs.height
