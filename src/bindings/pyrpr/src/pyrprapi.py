@@ -621,7 +621,8 @@ def get_rpr_sdk(base=Path()):
     return {
         'inc': p / "inc",
         'bin': p / "bin",
-        'lib': p / "lib" if platform.system() == 'Windows' else None
+        'lib': p / "lib" if platform.system() == 'Windows' else None,
+        'hipbin': p / "hipbin",
     }
 
 
