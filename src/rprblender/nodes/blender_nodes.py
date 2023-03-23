@@ -1428,7 +1428,7 @@ class ShaderNodeMath(NodeParser):
 
     def export(self):
         op = self.node.operation
-        in1 = self.get_input_value(0)
+        in1 = self.get_input_value(0).rgb_to_hsv().get_channel(2)
         if op == 'SINE':
             res = self.create_arithmetic(pyrpr.MATERIAL_NODE_OP_SIN, in1)
         elif op == 'COSINE':
@@ -1460,15 +1460,14 @@ class ShaderNodeMath(NodeParser):
             else:
                 res = in1.ceil()
         elif op == 'SQRT':
-            in1 = in1.to_bw()
-            res = (in1 > 0.0).if_else(in1 ** 1/2, 0.0)
+            res = (in1 > 0.0).if_else(in1 ** (1/2), 0.0)
         elif op == 'INVERSE_SQRT':
             res = (in1 > 0.0).if_else(in1 ** (-1/2), 0.0)
         elif op == 'SIGN':
             res = (in1 > 0.0) - (in1 < 0.0)
 
         else:
-            in2 = self.get_input_value(1)
+            in2 = self.get_input_value(1).rgb_to_hsv().get_channel(2)
             if op == 'ADD':
                 res = in1 + in2
             elif op == 'SUBTRACT':
@@ -1490,10 +1489,11 @@ class ShaderNodeMath(NodeParser):
             elif op == 'MODULO':
                 res = self.create_arithmetic(pyrpr.MATERIAL_NODE_OP_MOD, in1, in2)
             elif op == 'PINGPONG':
+                # Implementation from Blender: source/blender/blenlib/intern/ math_base_inline.c
                 res = (in2 != 0.0).if_else(abs((((in1 - in2) / (in2 * 2.0)) % 1.0) * in2 * 2.0 - in2), 0.0)
 
             else:
-                in3 = self.get_input_value(2)
+                in3 = self.get_input_value(2).rgb_to_hsv().get_channel(2)
                 if op == 'MULTIPLY_ADD':
                     res = in1 * in2 + in3
                 elif op == 'COMPARE':
@@ -1518,7 +1518,7 @@ class ShaderNodeMath(NodeParser):
         if self.node.use_clamp:
             res = res.clamp()
 
-        return res.to_bw()
+        return res
 
     def export_hybrid(self) -> [NodeItem, None]:
         op = self.node.operation
