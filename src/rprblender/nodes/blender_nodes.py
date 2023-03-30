@@ -1444,7 +1444,6 @@ class ShaderNodeMath(NodeParser):
 
     def export(self):
         op = self.node.operation
-        # we use a value data from the input
         in1 = self.get_input_value(0)
         if op == 'SINE':
             res = self.create_arithmetic(pyrpr.MATERIAL_NODE_OP_SIN, in1)
@@ -1484,7 +1483,6 @@ class ShaderNodeMath(NodeParser):
             res = (in1 > 0.0) - (in1 < 0.0)
 
         else:
-            # we use a value data from the input
             in2 = self.get_input_value(1)
             if op == 'ADD':
                 res = in1 + in2
@@ -1511,7 +1509,6 @@ class ShaderNodeMath(NodeParser):
                 res = (in2 != 0.0).if_else(abs((((in1 - in2) / (in2 * 2.0)) % 1.0) * in2 * 2.0 - in2), 0.0)
 
             else:
-                # we use a value data from the input
                 in3 = self.get_input_value(2)
                 if op == 'MULTIPLY_ADD':
                     res = in1 * in2 + in3
@@ -1534,7 +1531,6 @@ class ShaderNodeMath(NodeParser):
                     res = in1
                     log.warn("Unsupported math operation", op)
 
-        res = res.to_bw()
         if self.node.use_clamp:
             res = res.clamp()
 
