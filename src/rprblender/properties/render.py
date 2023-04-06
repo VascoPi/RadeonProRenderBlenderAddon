@@ -35,7 +35,6 @@ from bpy.props import (
 import platform
 
 from rprblender import utils
-from rprblender.utils import BLENDER_OCIO_VERSION, SDK_OCIO_VERSION
 from rprblender.utils.user_settings import get_user_settings, on_settings_changed
 from . import RPR_Properties
 from rprblender.engine import context
@@ -616,11 +615,12 @@ class RPR_RenderProperties(RPR_Properties):
             rpr_context.set_parameter(pyrpr.CONTEXT_TEXTURE_CACHE_PATH, self.texture_cache_dir)
 
         if isinstance(rpr_context, (context.RPRContext2, RPRContextHybridPro)):
-            ocio_path = str(utils.ocio_config_path())
-            rpr_context.set_parameter(pyrpr.CONTEXT_OCIO_CONFIG_PATH, ocio_path)
+            # set ocio config file to blender included one
+            rpr_context.set_parameter(pyrpr.CONTEXT_OCIO_CONFIG_PATH,
+                                      os.path.join(bpy.utils.resource_path('LOCAL'),
+                                                   'datafiles', 'colormanagement',
+                                                   'config.ocio'))
             rpr_context.set_parameter(pyrpr.CONTEXT_OCIO_RENDERING_COLOR_SPACE, "Linear")
-            loaded_ocio_version = SDK_OCIO_VERSION if BLENDER_OCIO_VERSION > SDK_OCIO_VERSION else BLENDER_OCIO_VERSION
-            log(f'Loaded OCIO version {loaded_ocio_version} config file:', ocio_path)
 
     def get_devices(self, is_final_engine=True):
         """ Get render devices settings for current mode """
