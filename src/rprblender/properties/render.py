@@ -325,6 +325,12 @@ class RPR_RenderProperties(RPR_Properties):
         default=False,
     )
 
+    use_gmon: BoolProperty(
+        name="Use GMON",
+        description="Use Median Of meaNs in accumulate and copy to remove fireflies",
+        default=False,
+    )
+
     # RENDER LIMITS
     limits: PointerProperty(type=RPR_RenderLimits)
     viewport_limits: PointerProperty(type=RPR_RenderLimits)

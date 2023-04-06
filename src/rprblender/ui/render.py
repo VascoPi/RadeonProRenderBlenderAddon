@@ -213,6 +213,8 @@ class RPR_RENDER_PT_advanced(RPR_Panel):
 
         if rpr.render_quality == 'HYBRIDPRO':
             row.prop(rpr, 'use_light_bvh')
+            row = col.row(align=True)
+            row.prop(rpr, 'use_gmon')
 
 
 class RPR_RENDER_PT_quality(RPR_Panel):

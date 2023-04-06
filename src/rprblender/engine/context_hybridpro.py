@@ -62,6 +62,7 @@ class RPRContext(context.RPRContext):
         # enable arithmetic operations on HybridPro
         self.set_parameter(pyrpr.CONTEXT_ENABLE_ARITHMETICS, True)
         self.set_parameter(pyrpr.CONTEXT_HIERARCHICAL_LIGHT_SAMPLING_ENABLED, bpy.context.scene.rpr.use_light_bvh)
+        self.set_parameter(pyrpr.CONTEXT_USE_GMON, bpy.context.scene.rpr.use_gmon)
 
     def resolve(self, aovs=None):
         pass
