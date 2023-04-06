@@ -49,6 +49,21 @@ def blender_data_dir():
     return Path(bpy.utils.system_resource("DATAFILES"))
 
 
+def ocio_config_path():
+    # check if blender ocio version is greater than SDK's one
+    # if so we use ocio config provided with the addon
+    # otherwise we use provided by Blender
+    # this is made this way because SDK ocio not always support upper version provided by blender
+    # especially if major versions are different
+    if BLENDER_OCIO_VERSION > SDK_OCIO_VERSION:
+        ocio_path = package_root_dir() / 'ocio'
+
+    else:
+        ocio_path = Path(bpy.utils.system_resource('DATAFILES', path='colormanagement'))
+
+    return ocio_path / 'config.ocio'
+
+
 def get_cpu_threads_number():
     return multiprocessing.cpu_count()
 
@@ -186,6 +201,8 @@ IS_LINUX = OS == 'Linux'
 SYSTEM_PROCESSOR = platform.uname().machine
 
 BLENDER_VERSION = f'{bpy.app.version[0]}.{bpy.app.version[1]}'
+BLENDER_OCIO_VERSION = f'{bpy.app.ocio.version[0]}.{bpy.app.ocio.version[1]}.{bpy.app.ocio.version[2]}'
+SDK_OCIO_VERSION = '2.1.1'
 
 IS_DEBUG_MODE = bool(int(os.environ.get('RPR_BLENDER_DEBUG', 0)))
 
