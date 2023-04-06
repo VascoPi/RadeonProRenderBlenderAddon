@@ -314,7 +314,7 @@ class RPR_RenderProperties(RPR_Properties):
     )
     texture_cache_dir: StringProperty(
         name='Texture Cache Dir',
-        description='Dirctory used for texture cache',
+        description='Directory used for texture cache',
         subtype='DIR_PATH',
         default=str(utils.package_root_dir() / ".tex_cache")
     )
@@ -531,6 +531,19 @@ class RPR_RenderProperties(RPR_Properties):
         default=True,
     )
 
+    viewport_upscale_quality: EnumProperty(
+        name="Viewport Upscale Quality",
+        description="Viewport upscaler quality mode",
+        items=(
+            ('FSR2_QUALITY_ULTRA_QUALITY', "Ultra Quality", "Ultra Quality"),
+            ('FSR2_QUALITY_MODE_QUALITY', "Quality", "Quality"),
+            ('FSR2_QUALITY_MODE_BALANCE', "Balance", "Balance"),
+            ('FSR2_QUALITY_MODE_PERFORMANCE', "Performance", "Performance"),
+            ('FSR2_QUALITY_MODE_ULTRA_PERFORMANCE', "Ultra Performance", "Ultra Performance"),
+        ),
+        default='FSR2_QUALITY_MODE_BALANCE',
+    )
+
     def init_rpr_context(self, rpr_context, is_final_engine=True, use_gl_interop=False, use_contour_integrator=False):
         """ Initializes rpr_context by device settings """
 
@@ -567,6 +580,11 @@ class RPR_RenderProperties(RPR_Properties):
             context_props.extend([
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_VERTEX_MEMORY_SIZE, vertex_mem_size,
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_ACC_MEMORY_SIZE, acc_mem_size])
+
+        # Enable HIP / CUDA support for RPRContext2
+        if isinstance(rpr_context, context.RPRContext2):
+            hipbin_dir = pyrpr.ffi.new('char[]', str(utils.hipbin_dir()).encode())  # path to precompiled HIP kernels
+            context_props.extend([pyrpr.CONTEXT_PRECOMPILED_BINARY_PATH, hipbin_dir])
 
         #  this functionality requires additional memory on
         #  both CPU and GPU even when no per-face materials set in scene.

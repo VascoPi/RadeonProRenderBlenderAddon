@@ -357,58 +357,76 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     log("sync", mesh, obj, "IndirectOnly" if indirect_only else "")
 
     obj_key = object.key(obj)
-    data = MeshData.init_from_mesh(mesh, obj=obj)
-    if not data:
-        rpr_context.create_empty_object(obj_key)
-        return
-
     transform = object.get_transform(obj)
-    deformation_data = rpr_context.deformation_cache.get(obj_key)
 
-    surface_material =False
-    volume_material = False
+    # the mesh key is used to find duplicated mesh data
+    mesh_key = obj.data.name
+    is_potential_instance = len(obj.modifiers) == 0
 
-    if obj.material_slots and obj.material_slots[0].material:
-        surface_material = material.sync(rpr_context, obj.material_slots[0].material, 'Surface', obj=obj)
-        volume_material = material.sync(rpr_context, obj.material_slots[0].material, 'Volume', obj=obj)
-
-    if (smoke_modifier and isinstance(rpr_context, RPRContext2))\
-            or (isinstance(rpr_context, RPRContextHybridPro) and (not isinstance(volume_material, EmptyMaterialNode) and isinstance(surface_material, EmptyMaterialNode))):
-        transform = volume.get_transform(obj)
-        rpr_shape = rpr_context.create_mesh(
-            obj_key,
-            None, None, None,
-            None, None, None,
-            None,
-            {pyrpr.MESH_VOLUME_FLAG: 1}
-        )
-
-    elif deformation_data and np.any(data.vertices != deformation_data.vertices) and \
-            np.any(data.normals != deformation_data.normals):
-        vertices = np.concatenate((data.vertices, deformation_data.vertices))
-        normals = np.concatenate((data.normals, deformation_data.normals))
-        rpr_shape = rpr_context.create_mesh(
-            obj_key,
-            np.ascontiguousarray(vertices), np.ascontiguousarray(normals), data.uvs,
-            data.vertex_indices, data.normal_indices, data.uv_indices,
-            data.num_face_vertices,
-            {pyrpr.MESH_MOTION_DIMENSION: 2}
-        )
+    # if an object has no modifiers it could potentially instance a mesh
+    # instead of exporting a new one
+    if is_potential_instance and mesh_key in rpr_context.mesh_masters:
+        rpr_mesh = rpr_context.mesh_masters[mesh_key]
+        rpr_shape = rpr_context.create_instance(obj_key, rpr_mesh)
     else:
-        rpr_shape = rpr_context.create_mesh(
-            obj_key,
-            data.vertices, data.normals, data.uvs,
-            data.vertex_indices, data.normal_indices, data.uv_indices,
-            data.num_face_vertices
-        )
+        data = MeshData.init_from_mesh(mesh, obj=obj)
+        if not data:
+            rpr_context.create_empty_object(obj_key)
+            return
 
+        deformation_data = rpr_context.deformation_cache.get(obj_key)
+
+        surface_material =False
+        volume_material = False
+
+        if obj.material_slots and obj.material_slots[0].material:
+            surface_material = material.sync(rpr_context, obj.material_slots[0].material, 'Surface', obj=obj)
+            volume_material = material.sync(rpr_context, obj.material_slots[0].material, 'Volume', obj=obj)
+
+        if (smoke_modifier and isinstance(rpr_context, RPRContext2))\
+                or (isinstance(rpr_context, RPRContextHybridPro) and (not isinstance(volume_material, EmptyMaterialNode) and isinstance(surface_material, EmptyMaterialNode))):
+            transform = volume.get_transform(obj)
+            rpr_shape = rpr_context.create_mesh(
+                obj_key,
+                None, None, None,
+                None, None, None,
+                None,
+                {pyrpr.MESH_VOLUME_FLAG: 1}
+            )
+
+        elif deformation_data and np.any(data.vertices != deformation_data.vertices) and \
+                np.any(data.normals != deformation_data.normals):
+            vertices = np.concatenate((data.vertices, deformation_data.vertices))
+            normals = np.concatenate((data.normals, deformation_data.normals))
+            rpr_shape = rpr_context.create_mesh(
+                obj_key,
+                np.ascontiguousarray(vertices), np.ascontiguousarray(normals), data.uvs,
+                data.vertex_indices, data.normal_indices, data.uv_indices,
+                data.num_face_vertices,
+                {pyrpr.MESH_MOTION_DIMENSION: 2}
+            )
+        else:
+            rpr_shape = rpr_context.create_mesh(
+                obj_key,
+                data.vertices, data.normals, data.uvs,
+                data.vertex_indices, data.normal_indices, data.uv_indices,
+                data.num_face_vertices
+            )
+
+        if data.vertex_colors is not None:
+            rpr_shape.set_vertex_colors(data.vertex_colors)
+
+        # add mesh to masters if no modifiers
+        if is_potential_instance:
+            rpr_context.mesh_masters[mesh_key] = rpr_shape
+
+    # create an instance of the mesh
     rpr_shape.set_name(obj_key)
     rpr_shape.set_id(obj.pass_index)
     rpr_context.set_aov_index_lookup(obj.pass_index, obj.pass_index,
                                      obj.pass_index, obj.pass_index, 1.0)
 
-    if data.vertex_colors is not None:
-        rpr_shape.set_vertex_colors(data.vertex_colors)
+
 
     assign_materials(rpr_context, rpr_shape, obj, material_override)
 
@@ -427,10 +445,13 @@ def sync_update(rpr_context: RPRContext, obj: bpy.types.Object, is_updated_geome
     log("sync_update", obj, mesh)
 
     obj_key = object.key(obj)
+    mesh_key = obj.data.name
     rpr_shape = rpr_context.objects.get(obj_key, None)
     if rpr_shape:
         if is_updated_geometry:
             rpr_context.remove_object(obj_key)
+            if mesh_key in rpr_context.mesh_masters:
+                rpr_context.mesh_masters.pop(mesh_key)
             sync(rpr_context, obj)
             return True
 

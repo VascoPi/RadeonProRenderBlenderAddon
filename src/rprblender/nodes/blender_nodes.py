@@ -64,6 +64,78 @@ def enabled(val: [NodeItem, None]):
     return True
 
 
+def blend_color(factor: NodeItem, color1: NodeItem, color2: NodeItem, blend_type: str):
+    # these mix types are copied from cycles OSL
+    if blend_type in ('MIX', 'COLOR'):
+        rpr_node = factor.blend(color1, color2)
+
+    elif blend_type == 'ADD':
+        rpr_node = factor.blend(color1, color1 + color2)
+
+    elif blend_type == 'MULTIPLY':
+        rpr_node = factor.blend(color1, color1 * color2)
+
+    elif blend_type == 'SUBTRACT':
+        rpr_node = factor.blend(color1, color1 - color2)
+
+    elif blend_type == 'DIVIDE':
+        rpr_node = factor.blend(color1, color1 / color2)
+
+    elif blend_type == 'DIFFERENCE':
+        rpr_node = factor.blend(color1, abs(color1 - color2))
+
+    elif blend_type == 'DARKEN':
+        rpr_node = factor.blend(color1, color1.min(color2))
+
+    elif blend_type == 'LIGHTEN':
+        rpr_node = factor.blend(color1, color1.max(color2))
+
+    elif blend_type == 'VALUE':
+        rpr_node = color1
+
+    elif blend_type == 'OVERLAY':
+        test_val = color1 < 0.5
+
+        rpr_node = factor.blend(color1, test_val.if_else(2.0 * color1 * color2,
+            (1.0 - (1.0 - color1) * (1.0 - color2))))
+
+    elif blend_type == 'SCREEN':
+        tm = 1.0 - factor
+        rpr_node = 1.0 - (tm + factor * (1.0 - color2)) * (1.0 - color1)
+
+    elif blend_type == 'SOFT_LIGHT':
+        tm = 1.0 - factor
+        scr = 1.0 - (1.0 - color2) * (1.0 - color1)
+        rpr_node = tm * color1 + factor * ((1.0 - color1) * color2 * color1 + color1 * scr)
+
+    elif blend_type == 'LINEAR_LIGHT':
+        test_val = color2 > 0.5
+        rpr_node = test_val.if_else(color1 + factor * (2.0 * (color2 - 0.5)),
+                                    color1 + factor * (2.0 * color2 - 1.0))
+
+    else:
+        # TODO: finish other mix types: SATURATION, HUE, BURN
+        rpr_node = factor.blend(color1, color2)
+
+    return rpr_node
+
+
+def eval_curve(mapping: bpy.types.CurveMapping, curve_index: int, value: float) -> float:
+    """ Evaluate 'value' on 'mapping' RGB Curve 'curve_index', clip to limits if needed """
+    if mapping.use_clip:
+        value = min(max(value, mapping.clip_min_x), mapping.clip_max_x)
+
+    if BLENDER_VERSION >= '2.82':  # CurveMapping and CurveMap were changed in Blender release 2.82
+        res = mapping.evaluate(mapping.curves[curve_index], value)
+    else:
+        res = mapping.curves[curve_index].evaluate(value)
+
+    if mapping.use_clip:
+        res = min(max(res, mapping.clip_min_y), mapping.clip_max_y)
+
+    return res
+
+
 class ShaderNodeOutputMaterial(BaseNodeParser):
     # inputs: Surface, Volume, Displacement
 
@@ -1296,62 +1368,11 @@ class ShaderNodeMixRGB(NodeParser):
         fac = self.get_input_value('Fac')
         color1 = self.get_input_value('Color1')
         color2 = self.get_input_value('Color2')
-
-        # these mix types are copied from cycles OSL
         blend_type = self.node.blend_type
 
-        if blend_type in ('MIX', 'COLOR'):
-            rpr_node = fac.blend(color1, color2)
-
-        elif blend_type == 'ADD':
-            rpr_node = fac.blend(color1, color1 + color2)
-
-        elif blend_type == 'MULTIPLY':
-            rpr_node = fac.blend(color1, color1 * color2)
-
-        elif blend_type == 'SUBTRACT':
-            rpr_node = fac.blend(color1, color1 - color2)
-
-        elif blend_type == 'DIVIDE':
-            rpr_node = fac.blend(color1, color1 / color2)
-
-        elif blend_type == 'DIFFERENCE':
-            rpr_node = fac.blend(color1, abs(color1 - color2))
-
-        elif blend_type == 'DARKEN':
-            rpr_node = fac.blend(color1, color1.min(color2))
-
-        elif blend_type == 'LIGHTEN':
-            rpr_node = fac.blend(color1, color1.max(color2))
-
-        elif blend_type == 'VALUE':
-            rpr_node = color1
-
-        elif blend_type == 'OVERLAY':
-            test_val = color1 < 0.5
-
-            rpr_node = fac.blend(color1, test_val.if_else(2.0 * color1 * color2,
-                (1.0 - (1.0 - color1) * (1.0 - color2))))
-
-        elif blend_type == 'SCREEN':
-            tm = 1.0 - fac
-            rpr_node = 1.0 - (tm + fac * (1.0 - color2)) * (1.0 - color1)
-
-        elif blend_type == 'SOFT_LIGHT':
-            tm = 1.0 - fac
-            scr = 1.0 - (1.0 - color2) * (1.0 - color1)
-            rpr_node = tm * color1 + fac * ((1.0 - color1) * color2 * color1 + color1 * scr)
-
-        elif blend_type == 'LINEAR_LIGHT':
-            test_val = color2 > 0.5
-            rpr_node = test_val.if_else(color1 + fac * (2.0 * (color2 - 0.5)),
-                                        color1 + fac * (2.0 * color2 - 1.0))
-
-        else:
-            # TODO: finish other mix types: SATURATION, HUE, SCREEN, BURN
-            log.warn("Ignoring unsupported Blend Type", blend_type, self.node, self.material, 
-                     "mix will be used")
-            rpr_node = fac.blend(color1, color2)
+        rpr_node = blend_color(fac, color1=color1, color2=color2, blend_type=blend_type)
+        if blend_type in ('SATURATION', 'HUE', 'BURN'):
+            log.warn(f"Ignoring unsupported MixRGB type", blend_type, self.node, self.material)
 
         if self.node.use_clamp:
             rpr_node = rpr_node.clamp()
@@ -1362,6 +1383,54 @@ class ShaderNodeMixRGB(NodeParser):
         blend_type = self.node.blend_type
 
         if blend_type in ('OVERLAY', 'LINEAR_LIGHT', ):
+            log.warn(f"Ignoring unsupported MixRGB type", blend_type, self.node, self.material)
+            return None
+
+        # other operations are supported by Hybrid
+        return self.export()
+
+
+class ShaderNodeMix(NodeParser):
+
+    def export(self):
+        data_type = self.node.data_type
+        if data_type == 'RGBA':
+            fac = self.get_input_value(0)
+            val1 = self.get_input_value(6)
+            val2 = self.get_input_value(7)
+
+        elif data_type == 'FLOAT':
+            fac = self.get_input_value(0)
+            val1 = self.get_input_value(2)
+            val2 = self.get_input_value(3)
+
+        else:  # VECTOR
+            fac = self.get_input_value(self.node.factor_mode != 'UNIFORM')
+            val1 = self.get_input_value(4)
+            val2 = self.get_input_value(5)
+
+        if self.node.clamp_factor:
+            fac = fac.clamp()
+
+        if data_type != 'RGBA':  # FLOAT, VECTOR
+            return fac.blend(val1, val2)
+
+        blend_type = self.node.blend_type
+        rpr_node = blend_color(fac, color1=val1, color2=val2, blend_type=blend_type)
+
+        if blend_type in ('SATURATION', 'HUE', 'BURN'):
+            log.warn(f"Ignoring unsupported MixRGB type", blend_type, self.node, self.material)
+
+        if self.node.clamp_result:
+            rpr_node = rpr_node.clamp()
+
+        return rpr_node
+
+    def export_hybrid(self) -> [NodeItem, None]:
+        data_type = self.node.data_type
+        blend_type = self.node.blend_type
+
+        if data_type == 'RGBA' and blend_type in ('OVERLAY', 'LINEAR_LIGHT', ):
             log.warn(f"Ignoring unsupported MixRGB type", blend_type, self.node, self.material)
             return None
 
@@ -1401,6 +1470,17 @@ class ShaderNodeMath(NodeParser):
         elif op == 'ROUND':
             f = in1.floor()
             res = (in1 % 1.0 < 0.5).if_else(f, f + 1.0)
+        elif op == 'TRUNC':
+            if in1 > 0.0:
+                res = in1.floor()
+            else:
+                res = in1.ceil()
+        elif op == 'SQRT':
+            res = (in1 > 0.0).if_else(in1 ** (1/2), 0.0)
+        elif op == 'INVERSE_SQRT':
+            res = (in1 > 0.0).if_else(in1 ** (-1/2), 0.0)
+        elif op == 'SIGN':
+            res = (in1 > 0.0) - (in1 < 0.0)
 
         else:
             in2 = self.get_input_value(1)
@@ -1424,6 +1504,9 @@ class ShaderNodeMath(NodeParser):
                 res = in1 > in2
             elif op == 'MODULO':
                 res = self.create_arithmetic(pyrpr.MATERIAL_NODE_OP_MOD, in1, in2)
+            elif op == 'PINGPONG':
+                # Implementation from Blender: source/blender/blenlib/intern/ math_base_inline.c
+                res = (in2 != 0.0).if_else(abs((((in1 - in2) / (in2 * 2.0)) % 1.0) * in2 * 2.0 - in2), 0.0)
 
             else:
                 in3 = self.get_input_value(2)
@@ -1634,6 +1717,9 @@ class ShaderNodeNormalMap(NodeParser):
 
     def export_hybrid(self):
         return self.get_input_value('Color')
+
+    def export_hybridpro(self):
+        return self.export()
 
 
 class ShaderNodeNormal(NodeParser):
@@ -1864,34 +1950,64 @@ class ShaderNodeTexGradient(NodeParser):
         return val
 
 
+class ShaderNodeFloatCurve(NodeParser):
+    """ Similar to color ramp, except read channel and apply mapping
+        There are two inputs here, Value and Factor.  What cycles does is remap value with the mapping
+        and mix between in value and remapped one with factor.
+    """
+    def export(self):
+        """ create a buffer from ramp data and sample it in nodes if connected """
+        BUFFER_SIZE = 256  # hard code, this is what cycles does
+
+        in_val = self.get_input_value('Value')
+        fac = self.get_input_value('Factor')
+        mapping = self.node.mapping
+
+        # these need to be initialized for some reason
+        mapping.initialize()
+
+        if isinstance(in_val.data, (float, int)):
+            out_val = eval_curve(mapping, 0, in_val.data)
+
+        else:
+            arr = np.fromiter((eval_curve(mapping, 0, i / (BUFFER_SIZE - 1)) for i in range(BUFFER_SIZE)),
+                              dtype=np.float32).reshape(-1, 1)
+            rpr_buffer = self.rpr_context.create_buffer(arr, pyrpr.BUFFER_ELEMENT_TYPE_FLOAT32)
+
+            # apply mapping to each channel
+            out_val = self.create_node(pyrpr.MATERIAL_NODE_BUFFER_SAMPLER, {
+                pyrpr.MATERIAL_INPUT_DATA: rpr_buffer,
+                pyrpr.MATERIAL_INPUT_UV: in_val * float(BUFFER_SIZE)
+            })
+
+        return fac.blend(in_val, out_val)
+
+    def export_hybrid(self):
+        """ Convert value using curve """
+        in_val = self.get_input_scalar('Value')
+        fac = self.get_input_scalar('Factor')
+        mapping = self.node.mapping
+
+        # these need to be initialized for some reason
+        mapping.initialize()
+
+        out_val = eval_curve(mapping, 0, in_val.get_channel(0).data)
+
+        return fac.blend(in_val, out_val)
+
+
 class ShaderNodeRGBCurve(NodeParser):
     """ Similar to color ramp, except read each channel and apply mapping
         There are two inputs here, color and Fac.  What cycles does is remap color with the mapping
         and mix between in color and remapped one with fac.
     """
-    @staticmethod
-    def eval_curve(mapping: bpy.types.CurveMapping, curve_index: int, value: float) -> float:
-        """ Evaluate 'value' on 'mapping' RGB Curve 'curve_index', clip to limits if needed """
-        if mapping.use_clip:
-            value = min(max(value, mapping.clip_min_x), mapping.clip_max_x)
-
-        if BLENDER_VERSION >= '2.82':  # CurveMapping and CurveMap were changed in Blender release 2.82
-            res = mapping.evaluate(mapping.curves[curve_index], value)
-        else:
-            res = mapping.curves[curve_index].evaluate(value)
-
-        if mapping.use_clip:
-            res = min(max(res, mapping.clip_min_y), mapping.clip_max_y)
-
-        return res
-
     def export(self):
         """ create a buffer from ramp data and sample it in nodes if connected """
         def rgba(i):
-            c = self.eval_curve(mapping, 3, i / (BUFFER_SIZE - 1))
-            return (self.eval_curve(mapping, 0, c),
-                    self.eval_curve(mapping, 1, c),
-                    self.eval_curve(mapping, 2, c),
+            c = eval_curve(mapping, 3, i / (BUFFER_SIZE - 1))
+            return (eval_curve(mapping, 0, c),
+                    eval_curve(mapping, 1, c),
+                    eval_curve(mapping, 2, c),
                     1.0)
 
         BUFFER_SIZE = 256  # hard code, this is what cycles does
@@ -1905,17 +2021,11 @@ class ShaderNodeRGBCurve(NodeParser):
 
         if isinstance(in_col.data, tuple):
             out_col = tuple(
-                self.eval_curve(mapping, i,
-                                self.eval_curve(mapping, 3, in_col.data[i]))
-                for i in range(3)
+                eval_curve(mapping, i, eval_curve(mapping, 3, in_col.data[i])) for i in range(3)
             ) + (in_col.data[3],)
 
         else:
-            arr = np.fromiter(
-                (v for i in range(BUFFER_SIZE)
-                   for v in rgba(i)),
-                dtype=np.float32
-            ).reshape(-1, 4)
+            arr = np.fromiter((v for i in range(BUFFER_SIZE) for v in rgba(i)), dtype=np.float32).reshape(-1, 4)
             rpr_buffer = self.rpr_context.create_buffer(arr, pyrpr.BUFFER_ELEMENT_TYPE_FLOAT32)
 
             # apply mapping to each channel
@@ -1949,9 +2059,7 @@ class ShaderNodeRGBCurve(NodeParser):
         mapping.initialize()
 
         out_col = tuple(
-            self.eval_curve(mapping, i,
-                            self.eval_curve(mapping, 3, in_col.get_channel(i).data))
-            for i in range(3)
+            eval_curve(mapping, i, eval_curve(mapping, 3, in_col.get_channel(i).data)) for i in range(3)
         ) + (in_col.get_channel(3).data,)
 
         return fac.blend(in_col, out_col)
@@ -2783,3 +2891,40 @@ class ShaderNodeBevel(NodeParser):
 
     def export_hybrid(self):
         return None
+
+
+class ShaderNodeHairInfo(NodeParser):
+    def export(self):
+        out_socket_name = self.socket_out.name
+        if out_socket_name == 'Intercept':
+            data = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
+                pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV,
+            })
+
+            # The value of 0.7 was manually selected in order to correspond the result achieved by Cycles.
+            rpr_node = (data.get_channel(2) / 0.7).clamp(0.0, 1.0)
+
+        elif out_socket_name == 'Random':
+            data = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
+                pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_PRIMITIVE_RANDOM_COLOR,
+            })
+
+            rpr_node = data.get_channel(0)
+
+        else:
+            # TODO add more outputs using primvar, at the moment core 3.01.00 doesn't support it for rpr_curve
+            # Is Strand, Length, Thickness, Tangent Normal
+            log.warn("Ignoring unsupported ", out_socket_name, self.node, self.material,
+                     "Default value will be used")
+
+            return None
+
+        return rpr_node
+
+    def export_hybrid(self):
+        out_socket_name = self.socket_out.name
+        if out_socket_name in ("Is Strand", "Length", "Thickness", "Tangent Normal", "Random"):
+            log.warn(f"Ignoring unsupported Output Socket", out_socket_name, self.node, self.material)
+            return None
+
+        return self.export()
