@@ -319,6 +319,12 @@ class RPR_RenderProperties(RPR_Properties):
         default=str(utils.package_root_dir() / ".tex_cache")
     )
 
+    use_light_bvh: BoolProperty(
+        name="Use Light BVH",
+        description="Use Light BVH for Interactive render quality",
+        default=False,
+    )
+
     # RENDER LIMITS
     limits: PointerProperty(type=RPR_RenderLimits)
     viewport_limits: PointerProperty(type=RPR_RenderLimits)

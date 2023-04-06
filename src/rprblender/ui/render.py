@@ -195,7 +195,7 @@ class RPR_RENDER_PT_advanced(RPR_Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.scene.rpr.render_quality == 'FULL2'
+        return context.scene.rpr.render_quality in ('FULL2', 'HYBRIDPRO')
 
     def draw(self, context):
         self.layout.use_property_split = True
@@ -204,11 +204,15 @@ class RPR_RENDER_PT_advanced(RPR_Panel):
         rpr = context.scene.rpr
         limits = rpr.limits
 
+        col = self.layout.column(align=True)
+        row = col.row(align=True)
+
         if rpr.render_quality == 'FULL2':
-            col = self.layout.column(align=True)
-            row = col.row(align=True)
             row.prop(limits, 'seed')
             row.prop(limits, 'anim_seed', text="", icon='TIME')
+
+        if rpr.render_quality == 'HYBRIDPRO':
+            row.prop(rpr, 'use_light_bvh')
 
 
 class RPR_RENDER_PT_quality(RPR_Panel):
