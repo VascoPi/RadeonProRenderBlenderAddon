@@ -16,6 +16,7 @@ import numpy as np
 import bpy
 
 from . import object, light, mesh, hair
+from rprblender.engine.context import RPRContext
 from rprblender.utils import logging
 log = logging.Log(tag='export.instance')
 
@@ -36,7 +37,7 @@ def sync(rpr_context, instance: bpy.types.DepsgraphObjectInstance, **kwargs):
     instance_key = key(instance)
     log("sync", instance, instance_key)
 
-    obj = instance.object
+    obj = instance.instance_object if instance.parent.name != instance.object.name else instance.object
 
     if obj.type in ('MESH', 'CURVE', 'FONT', 'SURFACE', 'META'):
         obj_key = object.key(obj)
@@ -45,7 +46,7 @@ def sync(rpr_context, instance: bpy.types.DepsgraphObjectInstance, **kwargs):
             # Instance of this object exists, but object itself isn't visible on the scene.
             # In this case we do additional object export and set visibility to False
             object.sync(rpr_context, obj, **kwargs)
-            rpr_mesh = rpr_context.objects[obj_key]
+            rpr_mesh = rpr_context.objects.get(obj_key, None)
             if not rpr_mesh:
                 return
             rpr_mesh.set_visibility(False)
@@ -73,6 +74,27 @@ def sync(rpr_context, instance: bpy.types.DepsgraphObjectInstance, **kwargs):
 
     else:
         raise ValueError("Unsupported object type for instance", instance, obj, obj.type)
+
+
+def sync_update(rpr_context: RPRContext, instance: bpy.types.DepsgraphObjectInstance, is_updated_geometry, is_updated_transform, **kwargs):
+    """ Update existing instance or create a new instance """
+    log("sync_update", instance)
+
+    inst_key = key(instance)
+    rpr_shape = rpr_context.objects.get(inst_key, None)
+    if not rpr_shape:
+        sync(rpr_context, instance, **kwargs)
+        return True
+
+    if is_updated_geometry:
+        rpr_context.remove_object(inst_key)
+        sync(rpr_context, instance, **kwargs)
+        return True
+
+    if is_updated_transform:
+        rpr_shape.set_transform(object.get_transform(instance))
+
+    return True
 
 
 def cache_blur_data(rpr_context, inst: bpy.types.DepsgraphObjectInstance):
