@@ -19,7 +19,7 @@ import numpy as np
 import bpy
 
 import pyrpr
-from rprblender.utils import helper_lib
+from rprblender.utils import helper_lib, BLENDER_VERSION
 from rprblender.engine.context import RPRContext2
 from rprblender.engine.context_hybridpro import RPRContext as RPRContextHybridPro
 
@@ -49,7 +49,7 @@ def sync(rpr_context, obj: bpy.types.Object, **kwargs):
     if not isinstance(rpr_context, (RPRContext2, RPRContextHybridPro)):
         return
 
-    if not helper_lib.is_openvdb_support:
+    if not (helper_lib.is_openvdb_support or BLENDER_VERSION >= '3.5'):
         log.warn("OpenVDB is not supported")
         return
 
@@ -73,7 +73,7 @@ def sync(rpr_context, obj: bpy.types.Object, **kwargs):
 
 
 def sync_update(rpr_context, obj: bpy.types.Object, is_updated_geometry, is_updated_transform, **kwargs):
-    if not helper_lib.is_openvdb_support:
+    if not (helper_lib.is_openvdb_support or BLENDER_VERSION >= '3.5'):
         return False
 
     obj_key = object.key(obj)
