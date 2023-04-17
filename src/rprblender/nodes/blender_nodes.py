@@ -145,10 +145,14 @@ class ShaderNodeOutputMaterial(BaseNodeParser):
         if self.material.cycles.displacement_method in {"BUMP", "BOTH"}:
             displacement_input = self.get_input_link("Displacement")
             if displacement_input:
-                return self.create_node(pyrpr.MATERIAL_NODE_BUMP_MAP, {
-                    pyrpr.MATERIAL_INPUT_COLOR: displacement_input,
-                    pyrpr.MATERIAL_INPUT_SCALE: 1.0,
-                })
+                if isinstance(self.rpr_context, RPRContextHybridPro):
+                    return None
+
+                else:
+                    return self.create_node(pyrpr.MATERIAL_NODE_BUMP_MAP, {
+                        pyrpr.MATERIAL_INPUT_COLOR: displacement_input,
+                        pyrpr.MATERIAL_INPUT_SCALE: 1.0,
+                    })
 
         return None
 
@@ -255,6 +259,24 @@ class ShaderNodeDisplacement(NodeParser):
 
     def export_hybrid(self):
         return None
+
+    def export_hybridpro(self):
+        height = self.get_input_value('Height')
+        midlevel = self.get_input_value('Midlevel')
+        scale = self.get_input_value('Scale')
+        normal = self.get_input_normal('Normal')
+
+        # displacement vec = Scale * (Height - Midlevel) * Normal
+        constant = self.create_node(pyrpr.MATERIAL_NODE_ARITHMETIC, {
+            pyrpr.MATERIAL_INPUT_OP: pyrpr.MATERIAL_NODE_OP_CONSTANT,
+            pyrpr.MATERIAL_INPUT_COLOR0: scale,
+        })
+
+        displacement = constant * (height - midlevel)
+        if normal:
+            displacement *= normal
+
+        return displacement
 
 
 class NodeReroute(NodeParser):
