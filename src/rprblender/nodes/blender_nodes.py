@@ -142,17 +142,16 @@ class ShaderNodeOutputMaterial(BaseNodeParser):
     def get_normal_node(self):
         """ Returns the normal node if displacement mode is set to bump 
             this returns a bumped normal, else returns a node_lookup N """
-        if self.material.cycles.displacement_method in {"BUMP", "BOTH"}:
+
+        # TODO RPRContextHybridPro doesn't support MATERIAL_NODE_BUMP_MAP
+        if self.material.cycles.displacement_method in {"BUMP", "BOTH"} and \
+                not isinstance(self.rpr_context, RPRContextHybridPro):
             displacement_input = self.get_input_link("Displacement")
             if displacement_input:
-                if isinstance(self.rpr_context, RPRContextHybridPro):
-                    return None
-
-                else:
-                    return self.create_node(pyrpr.MATERIAL_NODE_BUMP_MAP, {
-                        pyrpr.MATERIAL_INPUT_COLOR: displacement_input,
-                        pyrpr.MATERIAL_INPUT_SCALE: 1.0,
-                    })
+                return self.create_node(pyrpr.MATERIAL_NODE_BUMP_MAP, {
+                    pyrpr.MATERIAL_INPUT_COLOR: displacement_input,
+                    pyrpr.MATERIAL_INPUT_SCALE: 1.0,
+                })
 
         return None
 
@@ -266,15 +265,21 @@ class ShaderNodeDisplacement(NodeParser):
         scale = self.get_input_value('Scale')
         normal = self.get_input_normal('Normal')
 
-        # displacement vec = Scale * (Height - Midlevel) * Normal
-        constant = self.create_node(pyrpr.MATERIAL_NODE_ARITHMETIC, {
-            pyrpr.MATERIAL_INPUT_OP: pyrpr.MATERIAL_NODE_OP_CONSTANT,
-            pyrpr.MATERIAL_INPUT_COLOR0: scale,
-        })
+        height = (height - midlevel)
 
-        displacement = constant * (height - midlevel)
-        if normal:
-            displacement *= normal
+        if isinstance(height.data, (float, tuple)):
+            displacement = self.create_node(pyrpr.MATERIAL_NODE_ARITHMETIC, {
+                pyrpr.MATERIAL_INPUT_OP: pyrpr.MATERIAL_NODE_OP_MUL,
+                pyrpr.MATERIAL_INPUT_COLOR1: height,
+                pyrpr.MATERIAL_INPUT_COLOR0: scale,
+            })
+
+        else:
+            displacement = height * scale
+
+        #  TODO Produces crash if enable
+        # if normal:
+            # displacement *= normal
 
         return displacement
 
