@@ -277,7 +277,7 @@ class ShaderNodeDisplacement(NodeParser):
         else:
             displacement = height * scale
 
-        #  TODO Produces crash if enable
+        #  TODO normal is not supported at the moment, produces crash if enable
         # if normal:
             # displacement *= normal
 
