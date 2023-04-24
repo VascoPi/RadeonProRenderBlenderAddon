@@ -660,8 +660,8 @@ class RPR_RenderProperties(RPR_Properties):
                     pyrpr.CONTEXT_CREATEPROP_HYBRID_ACC_MEMORY_SIZE, acc_mem_size])
 
             if isinstance(rpr_context, RPRContextHybridPro):
-                staging_mem_size = pyrpr.ffi.new('int*', 32 * 1024 * 1024)  # 32mb texture memory
-                scratch_mem_size = pyrpr.ffi.new('int*', 16 * 1024 * 1024)  # 16mb for bvh memory
+                staging_mem_size = pyrpr.ffi.new('int*', 32 * 1024 * 1024)  # 32mb for staging memory
+                scratch_mem_size = pyrpr.ffi.new('int*', 16 * 1024 * 1024)  # 16mb for scratch memory
                 context_props.extend([
                     pyrpr.CONTEXT_CREATEPROP_HYBRID_STAGING_MEMORY_SIZE, staging_mem_size,
                     pyrpr.CONTEXT_CREATEPROP_HYBRID_SCRATCH_MEMORY_SIZE, scratch_mem_size])
