@@ -352,7 +352,7 @@ class RPR_RenderProperties(RPR_Properties):
     )
     texture_cache_dir: StringProperty(
         name='Texture Cache Dir',
-        description='Dirctory used for texture cache',
+        description='Directory used for texture cache',
         subtype='DIR_PATH',
         default=str(utils.package_root_dir() / ".tex_cache")
     )
@@ -666,6 +666,11 @@ class RPR_RenderProperties(RPR_Properties):
                     pyrpr.CONTEXT_CREATEPROP_HYBRID_STAGING_MEMORY_SIZE, staging_mem_size,
                     pyrpr.CONTEXT_CREATEPROP_HYBRID_SCRATCH_MEMORY_SIZE, scratch_mem_size])
 
+        # Enable HIP / CUDA support for RPRContext2
+        if isinstance(rpr_context, context.RPRContext2):
+            hipbin_dir = pyrpr.ffi.new('char[]', str(utils.hipbin_dir()).encode())  # path to precompiled HIP kernels
+            context_props.extend([pyrpr.CONTEXT_PRECOMPILED_BINARY_PATH, hipbin_dir])
+
         #  this functionality requires additional memory on
         #  both CPU and GPU even when no per-face materials set in scene.
         #  checking has_multimaterial_object before enable CONTEXT_CREATEPROP_HYBRID_ENABLE_PER_FACE_MATERIALS.
@@ -774,6 +779,13 @@ class RPR_RenderProperties(RPR_Properties):
             return False
 
         quality = getattr(pyrpr, 'RENDER_QUALITY_' + self.final_render_mode)
+        return rpr_context.set_parameter(pyrpr.CONTEXT_RENDER_QUALITY, quality)
+
+    def export_viewport_render_quality(self, rpr_context):
+        if self.viewport_render_mode == 'FULL':
+            return False
+
+        quality = getattr(pyrpr, 'RENDER_QUALITY_' + self.viewport_render_mode)
         return rpr_context.set_parameter(pyrpr.CONTEXT_RENDER_QUALITY, quality)
 
     @classmethod
