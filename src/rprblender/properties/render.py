@@ -667,7 +667,7 @@ class RPR_RenderProperties(RPR_Properties):
                 pyrpr.CONTEXT_CREATEPROP_HYBRID_ACC_MEMORY_SIZE, acc_mem_size])
 
         # Enable HIP / CUDA support for RPRContext2
-        if isinstance(rpr_context, context.RPRContext2) and not settings.use_opencl:
+        if isinstance(rpr_context, context.RPRContext2):
             hipbin_dir = pyrpr.ffi.new('char[]', str(utils.hipbin_dir()).encode())  # path to precompiled HIP kernels
             context_props.extend([pyrpr.CONTEXT_PRECOMPILED_BINARY_PATH, hipbin_dir])
 
@@ -779,6 +779,13 @@ class RPR_RenderProperties(RPR_Properties):
             return False
 
         quality = getattr(pyrpr, 'RENDER_QUALITY_' + self.final_render_mode)
+        return rpr_context.set_parameter(pyrpr.CONTEXT_RENDER_QUALITY, quality)
+
+    def export_viewport_render_quality(self, rpr_context):
+        if self.viewport_render_mode == 'FULL':
+            return False
+
+        quality = getattr(pyrpr, 'RENDER_QUALITY_' + self.viewport_render_mode)
         return rpr_context.set_parameter(pyrpr.CONTEXT_RENDER_QUALITY, quality)
 
     @classmethod
