@@ -45,6 +45,7 @@ class MeshData:
     num_face_vertices: np.array
     vertex_colors: np.array = None
     area: float = None
+    vertex_attributes: np.array = None 
 
     @staticmethod
     def init_from_mesh(mesh: bpy.types.Mesh, calc_area=False, obj=None):
@@ -112,6 +113,38 @@ class MeshData:
 
         if calc_area:
             data.area = sum(tri.area for tri in mesh.loop_triangles)
+           
+        # Not possible to store strings/ bools in primvars. If the type was bool, it would be possible to just pass 1 or 0, and let it be interpolated, and then round it, but that would require extra code in the shaderattribute node
+        # Also cannot currently handle anything besides vertex attributes (point/corner), without triangulating the mesh first, which is over my head.
+        # Ints and Int8s are currently excluded as well, and byte color is stored as float anyway(?)
+        # Ignoring givens: uvmap and position
+        # Returning list of lists, [AttName, AttSize, AttData, AttInterop] Interop stored for future implementation Face/Edge types (im assuming which are far less common)
+        validAtts =  [e for e in mesh.attributes if e.data_type in ['FLOAT', 'FLOAT_VECTOR', 'FLOAT_COLOR', 'BYTE_COLOR', 'FLOAT2'] 
+                      and e.domain in ['POINT', 'CORNER']
+                      and e.name not in ['position', 'UVMap']]
+        for att in validAtts:
+            if data.vertex_attributes is None:
+                data.vertex_attributes = []
+            # Three element types
+            if att.data_type in ['FLOAT_VECTOR']:
+                tmpDat = get_data_from_collection(att.data, 'vector', len(att.data)*3, np.float32)
+                attData = np.array([att.name, 3,tmpDat, pyrpr.PRIMVAR_INTERPOLATION_VERTEX], dtype=np.object)
+                data.vertex_attributes.append(attData)
+            # Four element types
+            elif att.data_type in ['BYTE_COLOR', 'FLOAT_COLOR']:
+                tmpDat = get_data_from_collection(att.data, 'color', len(att.data)*4, np.float32)
+                attData = np.array([att.name, 4,tmpDat, pyrpr.PRIMVAR_INTERPOLATION_VERTEX], dtype=np.object)
+                data.vertex_attributes.append(attData)
+            # Two element Types
+            elif att.data_type == 'FLOAT2':
+                tmpDat = get_data_from_collection(att.data, 'vector', len(att.data)*2, np.float32)
+                attData = np.array([att.name, 2,tmpDat, pyrpr.PRIMVAR_INTERPOLATION_VERTEX], dtype=np.object)
+                data.vertex_attributes.append(attData)
+            # Single Element Types
+            elif att.data_type == 'FLOAT':
+                tmpDat = get_data_from_collection(att.data, 'value', len(att.data)*1, np.float32)
+                attData = np.array([att.name, 1,tmpDat, pyrpr.PRIMVAR_INTERPOLATION_VERTEX], dtype=np.object)
+                data.vertex_attributes.append(attData)
 
         # set active vertex color map
         if mesh.vertex_colors.active:
@@ -405,6 +438,12 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
 
         if data.vertex_colors is not None:
             rpr_shape.set_vertex_colors(data.vertex_colors)
+            
+        if data.vertex_attributes is not None:
+            for att in data.vertex_attributes:
+                if att[0] not in rpr_context.mesh_attribute_names:
+                    rpr_context.mesh_attribute_names.append(att[0])
+                rpr_shape.set_vertex_attribute(rpr_context.mesh_attribute_names.index(att[0])+100, att[2], att[1], att[3])    
 
         # add mesh to masters if no modifiers
         if is_potential_instance:
