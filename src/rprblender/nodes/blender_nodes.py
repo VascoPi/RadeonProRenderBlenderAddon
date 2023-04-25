@@ -136,6 +136,18 @@ def eval_curve(mapping: bpy.types.CurveMapping, curve_index: int, value: float) 
     return res
 
 
+class ShaderNodeAttribute(NodeParser):
+    """ TODO: attribute_type handling, actual attribute type (bool, int, int8) handling"""
+    def export(self):
+        # Note: This doesnt take into account that an attribute might not apply to an object, but neither do cycles/eevee
+        if self.node.attribute_name in self.rpr_context.mesh_attribute_names:
+            aNode = self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, { 
+                pyrpr.MATERIAL_INPUT_VALUE: self.rpr_context.mesh_attribute_names.index(self.node.attribute_name)+100
+            })
+            return aNode
+        return None
+    
+
 class ShaderNodeOutputMaterial(BaseNodeParser):
     # inputs: Surface, Volume, Displacement
 
