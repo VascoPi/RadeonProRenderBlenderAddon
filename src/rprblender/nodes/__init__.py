@@ -40,6 +40,7 @@ def sorted_items(items:list):
 
 node_categories = [
     RPR_ShaderNodeCategory('RPR_INPUT', "Input", items=sorted_items([
+        NodeItem('ShaderNodeAttribute'),
         NodeItem('ShaderNodeAmbientOcclusion'),
         NodeItem('ShaderNodeFresnel'),
         NodeItem('ShaderNodeLayerWeight'),
