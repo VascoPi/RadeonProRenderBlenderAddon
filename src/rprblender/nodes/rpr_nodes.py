@@ -771,19 +771,10 @@ class RPRShaderNodeLookup(RPRShaderNode):
 
         def export(self):
             if self.node.lookup_type == 'VERTEX_COLOR':
-                r = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
-                    pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_VERTEX_VALUE0
+                vcNode = self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, {
+                    pyrpr.MATERIAL_INPUT_VALUE: 99
                 })
-                g = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
-                    pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_VERTEX_VALUE1
-                })
-                b = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
-                    pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_VERTEX_VALUE2
-                })
-                a = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
-                    pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_VERTEX_VALUE3
-                })
-                return r.combine4(g, b, a)
+                return vcNode
 
             else:
                 return self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
