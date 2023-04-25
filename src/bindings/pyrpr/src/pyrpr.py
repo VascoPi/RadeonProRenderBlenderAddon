@@ -562,7 +562,7 @@ class Shape(Object):
         ShapeSetVertexValue(self, index, ffi.cast("rpr_int *", indices.ctypes.data),
                             ffi.cast("float *", values.ctypes.data), len(indices))
     
-     def set_primvar(self, key: int, data, floatcount: int, count: int, interop):
+    def set_primvar(self, key: int, data, floatcount: int, count: int, interop):
         ShapeSetPrimvar(self, ffi.cast("rpr_uint",key), ffi.cast("float*", data.ctypes.data), 
                         ffi.cast("rpr_uint",floatcount), ffi.cast("rpr_uint",count),
                         ffi.cast("rpr_primvar_interpolation_type",interop))
