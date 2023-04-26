@@ -33,11 +33,13 @@ from bpy.props import (
 )
 import platform
 
+from rprblender import config
 from rprblender import utils
 from rprblender.utils.user_settings import get_user_settings, on_settings_changed
 from . import RPR_Properties
 from rprblender.engine import context
 from rprblender.engine.context_hybridpro import RPRContext as RPRContextHybridPro
+from rprblender.engine.context_hybrid import RPRContext as RPRContextHybrid
 
 from rprblender.utils import logging, IS_MAC, preset_root_dir
 log = logging.Log(tag='properties.render')
@@ -266,6 +268,14 @@ class RPR_UserSettings(bpy.types.PropertyGroup):
         description="Use OpenGL interoperability in viewport. This should speedup viewport rendering. "
                     "However, to use an external GPU for viewport rendering this should be disabled",
         default=True,
+        update=on_settings_changed,
+    )
+
+    use_opencl: BoolProperty(
+        name="Use OpenCL",
+        description="Use OpenCl kernels for Final, "
+                    "Viewport and Material Preview render otherwise HIP kernel is used",
+        default=config.use_opencl,
         update=on_settings_changed,
     )
 
@@ -574,7 +584,13 @@ class RPR_RenderProperties(RPR_Properties):
 
     hybrid_low_mem: BoolProperty(
         name="Use 4GB memory",
-        description="Enable to support GPUs with 4Gb VRAM or less",
+        description="Enable to support GPUs with 4Gb VRAM or less for Final render mode",
+        default=False,
+    )
+
+    viewport_hybrid_low_mem: BoolProperty(
+        name="Use 4GB memory",
+        description="Enable to support GPUs with 4Gb VRAM or less for Viewport render mode",
         default=False,
     )
 
@@ -598,7 +614,7 @@ class RPR_RenderProperties(RPR_Properties):
 
     viewport_upscale: BoolProperty(
         name="Viewport Upscaling",
-        description="Rendering at 2 times lower resoluting then upscaling rendered image "
+        description="Rendering at lower resoluting then upscaling rendered image "
                     "in the end of render",
         default=True,
     )
@@ -623,6 +639,7 @@ class RPR_RenderProperties(RPR_Properties):
         log("Syncing scene: %s" % scene.name)
 
         devices = self.get_devices(is_final_engine)
+        settings = get_user_settings()
 
         context_flags = set()
         # enable CMJ sampler for adaptive sampling
@@ -639,19 +656,28 @@ class RPR_RenderProperties(RPR_Properties):
                 if use_gl_interop:
                     context_flags |= {pyrpr.CREATION_FLAGS_ENABLE_GL_INTEROP}
 
+                if settings.use_opencl:
+                    context_flags |= {pyrpr.CREATION_FLAGS_ENABLE_OPENCL}
+
                 if not metal_enabled and platform.system() == 'Darwin'\
                         and not isinstance(rpr_context, context.RPRContext2):
                     # only enable metal once and if a GPU is turned on
                     metal_enabled = True
                     context_flags |= {pyrpr.CREATION_FLAGS_ENABLE_METAL}
 
-        if self.final_render_mode in ('LOW', 'MEDIUM', 'HIGH') and self.hybrid_low_mem:
-            # set these props to use < 4gb
-            vertex_mem_size = pyrpr.ffi.new('int*', 768 * 1024 * 1024)  # 768mb texture memory
-            acc_mem_size = pyrpr.ffi.new('int*', 1024 ** 3)             # 1gb for bvh memry
-            context_props.extend([
-                pyrpr.CONTEXT_CREATEPROP_HYBRID_VERTEX_MEMORY_SIZE, vertex_mem_size,
-                pyrpr.CONTEXT_CREATEPROP_HYBRID_ACC_MEMORY_SIZE, acc_mem_size])
+        # set these props to use < 4gb
+        if (self.hybrid_low_mem and is_final_engine) or (self.viewport_hybrid_low_mem and not is_final_engine):
+            if isinstance(rpr_context, RPRContextHybrid):
+                acc_mem_size = pyrpr.ffi.new('int*', 1024 ** 3)             # 1gb for bvh memory
+                context_props.extend([
+                    pyrpr.CONTEXT_CREATEPROP_HYBRID_ACC_MEMORY_SIZE, acc_mem_size])
+
+            if isinstance(rpr_context, RPRContextHybridPro):
+                staging_mem_size = pyrpr.ffi.new('int*', 32 * 1024 * 1024)  # 32mb for staging memory
+                scratch_mem_size = pyrpr.ffi.new('int*', 16 * 1024 * 1024)  # 16mb for scratch memory
+                context_props.extend([
+                    pyrpr.CONTEXT_CREATEPROP_HYBRID_STAGING_MEMORY_SIZE, staging_mem_size,
+                    pyrpr.CONTEXT_CREATEPROP_HYBRID_SCRATCH_MEMORY_SIZE, scratch_mem_size])
 
         # Enable HIP / CUDA support for RPRContext2
         if isinstance(rpr_context, context.RPRContext2):
