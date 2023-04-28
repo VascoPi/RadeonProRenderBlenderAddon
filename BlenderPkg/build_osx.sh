@@ -17,4 +17,4 @@ pushd ..
 ./build_osx.sh
 popd
 
-python3.9 create_zip_addon.py
+python3.10 create_zip_addon.py

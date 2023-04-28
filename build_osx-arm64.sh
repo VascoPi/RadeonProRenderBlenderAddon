@@ -5,9 +5,8 @@ arch -arm64 python3.10 cmd_tools/create_sdk.py
 IGNORE_MISSING_OPENMP=1
 cxml="/usr/local/bin/castxml"
 if [ -f "$cxml" ]; then
-	arch -arm64 python3.9 src/bindings/pyrpr/src/pyrprapi.py $cxml
+	arch -arm64 python3.10 src/bindings/pyrpr/src/pyrprapi.py $cxml
 	if [ -f "./bindings-ok" ]; then
-  	arch -arm64 python3.9 build.py
   	arch -arm64 python3.10 build.py
 	else
 		echo Compiling bindings failed
