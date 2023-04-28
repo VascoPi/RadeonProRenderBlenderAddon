@@ -19,4 +19,4 @@ pushd ..
 ./build.sh
 popd
 
-python3.7 create_zip_addon.py
+python3.9 create_zip_addon.py

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-arch -arm64 python3.9 cmd_tools/create_sdk.py
+arch -arm64 python3.10 cmd_tools/create_sdk.py
 
 IGNORE_MISSING_OPENMP=1
 cxml="/usr/local/bin/castxml"
