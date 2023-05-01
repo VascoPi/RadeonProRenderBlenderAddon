@@ -22,6 +22,7 @@ import mathutils
 
 import pyrpr
 from rprblender.engine.context import RPRContext, RPRContext2
+from rprblender.engine.context_hybridpro import RPRContext as RPRContextHybridPro
 from . import object, material, volume
 from rprblender.utils import get_data_from_collection, BLENDER_VERSION
 
@@ -30,6 +31,10 @@ log = logging.Log(tag='export.mesh')
 
 
 NUM_TRIANGLES_WARNING = 1000000
+
+
+def key(obj):
+    return f"{obj.data.name_full}_{obj.original.type}"
 
 
 @dataclass(init=False)
@@ -293,6 +298,11 @@ def assign_materials(rpr_context: RPRContext, rpr_shape: pyrpr.Shape, obj: bpy.t
         # setting displacement material
         if mat.cycles.displacement_method in {'DISPLACEMENT', 'BOTH'}:
             rpr_displacement = material.sync(rpr_context, mat, 'Displacement', obj=obj)
+
+            # HybridPro: displacement disappears in case we set displacement material that is already set
+            if isinstance(rpr_context, RPRContextHybridPro) and rpr_shape.displacement_material is rpr_displacement:
+                return True
+
             rpr_shape.set_displacement_material(rpr_displacement)
             # if no subdivision set that up to 'high' so displacement looks good
             # note subdivision is capped to resolution
@@ -391,7 +401,7 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     transform = object.get_transform(obj)
 
     # the mesh key is used to find duplicated mesh data
-    mesh_key = obj.data.name_full
+    mesh_key = key(obj)
     is_potential_instance = len(obj.modifiers) == 0
     
     # if an object has no modifiers it could potentially instance a mesh
@@ -474,7 +484,7 @@ def sync_update(rpr_context: RPRContext, obj: bpy.types.Object, is_updated_geome
     log("sync_update", obj, mesh)
 
     obj_key = object.key(obj)
-    mesh_key = obj.data.name_full
+    mesh_key = key(obj)
     rpr_shape = rpr_context.objects.get(obj_key, None)
     if rpr_shape:
         if is_updated_geometry:
