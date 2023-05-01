@@ -66,8 +66,8 @@ class RPRContext:
         self.object_hashes = {}
         self.curves = {}
         self.volumes = {}
-        self.mesh_attribute_names = []
-        
+        self.mesh_attribute_names = {}
+
         self.do_motion_blur = False
         self.engine_type = None
         

@@ -33,6 +33,10 @@ log = logging.Log(tag='export.mesh')
 NUM_TRIANGLES_WARNING = 1000000
 
 
+def attribute_key(obj, attr_name):
+    return f"{key(obj)}_{attr_name}"
+
+
 def key(obj):
     return f"{obj.data.name_full}_{obj.original.type}"
 
@@ -50,7 +54,7 @@ class MeshData:
     num_face_vertices: np.array
     vertex_colors: np.array = None
     area: float = None
-    vertex_attributes: np.array = None 
+    vertex_attributes: np.array = None
 
     @staticmethod
     def init_from_mesh(mesh: bpy.types.Mesh, calc_area=False, obj=None):
@@ -103,13 +107,13 @@ class MeshData:
                 data.uvs.append(uvs)
                 data.uv_indices.append(uv_indices)
 
-            if obj:
-                secondary_uv = uv_mesh.rpr.secondary_uv_layer(obj)
-                if secondary_uv:
-                    uvs = get_data_from_collection(secondary_uv.data, 'uv', (len(secondary_uv.data), 2))
-                    if len(uvs) > 0:
-                        data.uvs.append(uvs)
-                        data.uv_indices.append(uv_indices)
+            # if obj:
+            #     secondary_uv = uv_mesh.rpr.secondary_uv_layer(obj)
+            #     if secondary_uv:
+            #         uvs = get_data_from_collection(secondary_uv.data, 'uv', (len(secondary_uv.data), 2))
+            #         if len(uvs) > 0:
+            #             data.uvs.append(uvs)
+            #             data.uv_indices.append(uv_indices)
 
         data.num_face_vertices = np.full((tris_len,), 3, dtype=np.int32)
         data.vertex_indices = get_data_from_collection(mesh.loop_triangles, 'vertices',
@@ -118,53 +122,39 @@ class MeshData:
 
         if calc_area:
             data.area = sum(tri.area for tri in mesh.loop_triangles)
-           
+
         # Not possible to store strings/ bools in primvars. If the type was bool, it would be possible to just pass 1 or 0, and let it be interpolated, and then round it, but that would require extra code in the shaderattribute node
         # Also cannot currently handle anything besides vertex attributes (point/corner), without triangulating the mesh first, which is over my head.
         # Ints and Int8s are currently excluded as well, and byte color is stored as float anyway(?)
         # Ignoring givens: uvmap and position
         # Returning list of lists, [AttName, AttSize, AttData, AttInterop] Interop stored for future implementation Face/Edge types (im assuming which are far less common)
-        validAtts =  [e for e in mesh.attributes if e.data_type in ['FLOAT', 'FLOAT_VECTOR', 'FLOAT_COLOR', 'BYTE_COLOR', 'FLOAT2'] 
+        valid_attributes = [e for e in mesh.attributes if e.data_type in ['FLOAT', 'FLOAT_VECTOR', 'FLOAT_COLOR', 'BYTE_COLOR', 'FLOAT2']
                       and e.domain in ['POINT', 'CORNER']
-                      and e.name not in ['position', 'UVMap']]
-        for att in validAtts:
+                      and e.name not in ['position', ]]
+        for att in valid_attributes:
+            interpolation_type = pyrpr.PRIMVAR_INTERPOLATION_VERTEX if att.domain == 'POINT' else pyrpr.PRIMVAR_INTERPOLATION_FACEVARYING_UV
             if data.vertex_attributes is None:
                 data.vertex_attributes = []
             # Three element types
             if att.data_type in ['FLOAT_VECTOR']:
-                tmpDat = get_data_from_collection(att.data, 'vector', len(att.data)*3, np.float32)
-                attData = np.array([att.name, 3,tmpDat, pyrpr.PRIMVAR_INTERPOLATION_VERTEX], dtype=np.object)
-                data.vertex_attributes.append(attData)
+                tmp_data = get_data_from_collection(att.data, 'vector', len(att.data)*3, np.float32)
+                attr_data = np.array([att.name, 3, tmp_data, interpolation_type], dtype=np.object)
+                data.vertex_attributes.append(attr_data)
             # Four element types
             elif att.data_type in ['BYTE_COLOR', 'FLOAT_COLOR']:
-                tmpDat = get_data_from_collection(att.data, 'color', len(att.data)*4, np.float32)
-                attData = np.array([att.name, 4,tmpDat, pyrpr.PRIMVAR_INTERPOLATION_VERTEX], dtype=np.object)
-                data.vertex_attributes.append(attData)
+                tmp_data = get_data_from_collection(att.data, 'color', len(att.data)*4, np.float32)
+                attr_data = np.array([att.name, 4, tmp_data, interpolation_type], dtype=np.object)
+                data.vertex_attributes.append(attr_data)
             # Two element Types
             elif att.data_type == 'FLOAT2':
-                tmpDat = get_data_from_collection(att.data, 'vector', len(att.data)*2, np.float32)
-                attData = np.array([att.name, 2,tmpDat, pyrpr.PRIMVAR_INTERPOLATION_VERTEX], dtype=np.object)
-                data.vertex_attributes.append(attData)
+                tmp_data = get_data_from_collection(att.data, 'vector', len(att.data)*2, np.float32)
+                attr_data = np.array([att.name, 2, tmp_data, interpolation_type], dtype=np.object)
+                data.vertex_attributes.append(attr_data)
             # Single Element Types
             elif att.data_type == 'FLOAT':
-                tmpDat = get_data_from_collection(att.data, 'value', len(att.data)*1, np.float32)
-                attData = np.array([att.name, 1,tmpDat, pyrpr.PRIMVAR_INTERPOLATION_VERTEX], dtype=np.object)
-                data.vertex_attributes.append(attData)
-
-        # set active vertex color map
-        if mesh.vertex_colors.active:
-            color_data = mesh.vertex_colors.active.data
-            # getting vertex colors and its indices (the same as uv_indices)
-            colors = get_data_from_collection(color_data, 'color', (len(color_data), 4))
-            color_indices = data.uv_indices[0] if (data.uv_indices is not None and len(data.uv_indices) > 0) else \
-                get_data_from_collection(mesh.loop_triangles, 'loops',
-                                         (tris_len * 3,), np.int32)
-
-            # preparing vertex_color buffer with the same size as vertices and
-            # setting its data by indices from vertex colors
-            if colors[color_indices].size > 0:
-                data.vertex_colors = np.zeros((len(data.vertices), 4), dtype=np.float32)
-                data.vertex_colors[data.vertex_indices] = colors[color_indices]
+                tmp_data = get_data_from_collection(att.data, 'value', len(att.data)*1, np.float32)
+                attr_data = np.array([att.name, 1, tmp_data, interpolation_type], dtype=np.object)
+                data.vertex_attributes.append(attr_data)
 
         return data
 
@@ -446,14 +436,14 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
                 data.num_face_vertices
             )
 
-        if data.vertex_colors is not None:
-            rpr_shape.set_vertex_colors(data.vertex_colors)
-            
         if data.vertex_attributes is not None:
             for att in data.vertex_attributes:
-                if att[0] not in rpr_context.mesh_attribute_names:
-                    rpr_context.mesh_attribute_names.append(att[0])
-                rpr_shape.set_vertex_attribute(rpr_context.mesh_attribute_names.index(att[0])+100, att[2], att[1], att[3])    
+                attr_key = attribute_key(obj, att[0])
+                attr_id = len(rpr_context.mesh_attribute_names)
+                if attr_key not in rpr_context.mesh_attribute_names:
+                    rpr_context.mesh_attribute_names[attr_key] = attr_id
+                rpr_shape.set_vertex_attribute(attr_id, att[2], att[1], att[3])
+
 
         # add mesh to masters if no modifiers
         if is_potential_instance:
@@ -491,6 +481,10 @@ def sync_update(rpr_context: RPRContext, obj: bpy.types.Object, is_updated_geome
             rpr_context.remove_object(obj_key)
             if mesh_key in rpr_context.mesh_masters:
                 rpr_context.mesh_masters.pop(mesh_key)
+            attr_keys = list(rpr_context.mesh_attribute_names.keys())
+            for attr in attr_keys:
+                if mesh_key in attr:
+                    rpr_context.mesh_attribute_names.pop(attr)
             sync(rpr_context, obj)
             return True
 

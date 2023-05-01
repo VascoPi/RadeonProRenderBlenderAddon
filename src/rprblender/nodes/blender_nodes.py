@@ -2464,15 +2464,40 @@ class ShaderNodeUVMap(NodeParser):
                     pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV
                 })
 
-            # use secondary UV set if any available for the mesh
-            if mesh.rpr.secondary_uv_layer(self.object):
-                return self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
-                    pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV1
-                })
+            if self.node.uv_map in mesh.uv_layers:
+                from rprblender.export.mesh import attribute_key
+                attr_key = attribute_key(self.object, self.node.uv_map)
+                if attr_key in self.rpr_context.mesh_attribute_names:
+                    attr_index = self.rpr_context.mesh_attribute_names[attr_key]
+                    return self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, {
+                        pyrpr.MATERIAL_INPUT_VALUE: attr_index
+                    })
 
-        return self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
-            pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV
-        })
+            return None
+
+class ShaderNodeVertexColor(NodeParser):
+    """
+    Placeholder to support new material preview mode 'cloth'
+
+    Allow usage of UV maps other than primary. UV name passed in uv_map.
+    For RPR usage this node need to know the name of base UV map of Object it assigned to.
+    This way it will be able to return LOOKUP.UV or LOOKUP.UV1 for each user Object.
+    """
+    def export(self):
+        """ Check if uv_map is set to primary, use LOOKUP node to set it """
+        # The material preview uv_map value is surprisingly empty
+
+        if self.object and self.object.type == 'MESH':
+            mesh = self.object.data
+            if self.node.layer_name in mesh.color_attributes:
+                from rprblender.export.mesh import attribute_key
+                attr_key = attribute_key(self.object, self.node.layer_name)
+                if attr_key in self.rpr_context.mesh_attribute_names:
+                    attr_index = self.rpr_context.mesh_attribute_names[attr_key]
+                    return self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, {
+                        pyrpr.MATERIAL_INPUT_VALUE: attr_index
+                    })
+        return None
 
 
 class ShaderNodeVolumePrincipled(NodeParser):
