@@ -55,6 +55,7 @@ node_categories = [
         NodeItem('RPRShaderNodeLookup'),
         NodeItem('ShaderNodeBevel'),
         NodeItem('ShaderNodeHairInfo'),
+        NodeItem('ShaderNodeVertexColor')
     ])),
     RPR_ShaderNodeCategory('RPR_OUTPUT', "Output", items=sorted_items([
         NodeItem('ShaderNodeOutputMaterial'),

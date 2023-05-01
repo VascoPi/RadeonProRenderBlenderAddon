@@ -561,23 +561,17 @@ class Shape(Object):
     def set_vertex_value(self, index: int, indices, values):
         ShapeSetVertexValue(self, index, ffi.cast("rpr_int *", indices.ctypes.data),
                             ffi.cast("float *", values.ctypes.data), len(indices))
-    
+
     def set_primvar(self, key: int, data, floatcount: int, count: int, interop):
-        ShapeSetPrimvar(self, ffi.cast("rpr_uint",key), ffi.cast("float*", data.ctypes.data), 
+        ShapeSetPrimvar(self, ffi.cast("rpr_uint",key), ffi.cast("float*", data.ctypes.data),
                         ffi.cast("rpr_uint",floatcount), ffi.cast("rpr_uint",count),
                         ffi.cast("rpr_primvar_interpolation_type",interop))
-    
+
     def set_vertex_attribute(self, key: int, data, floatcount: int, interop):
         floatData = np.array(data)
         floatData = floatData.flatten()
         floatData = np.ascontiguousarray(floatData, dtype=np.float32)
-        self.set_primvar(key,floatData,  len(floatData), floatcount, interop)
-        
-    def set_vertex_colors(self, colors):
-        vColors = np.array(colors)
-        vColors = vColors.flatten()
-        vColors = np.ascontiguousarray(vColors, dtype=np.float32)
-        self.set_primvar(99,vColors,  len(vColors), 4, PRIMVAR_INTERPOLATION_VERTEX)
+        self.set_primvar(key, floatData,  len(floatData), floatcount, interop)
 
     def set_id(self, id):
         ShapeSetObjectID(self, id)
