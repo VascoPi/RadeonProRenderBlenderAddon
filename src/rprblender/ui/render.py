@@ -224,7 +224,7 @@ class RPR_RENDER_PT_advanced(RPR_Panel):
 
     @classmethod
     def poll(cls, context):
-        return context.scene.rpr.final_render_mode == 'FULL2'
+        return context.scene.rpr.final_render_mode in ['FULL2', 'HYBRIDPRO']
 
     def draw(self, context):
         self.layout.use_property_split = True
@@ -233,14 +233,20 @@ class RPR_RENDER_PT_advanced(RPR_Panel):
         rpr = context.scene.rpr
         limits = rpr.limits
 
+        col = self.layout.column(align=True)
+        row = col.row(align=True)
+
         if rpr.final_render_mode == 'FULL2':
-            col = self.layout.column(align=True)
-            row = col.row(align=True)
             row.prop(limits, 'seed')
             row.prop(limits, 'anim_seed', text="", icon='TIME')
 
             row = col.row()
             row.prop(rpr, 'texture_compression')
+
+        if rpr.final_render_mode == 'HYBRIDPRO':
+            row.prop(rpr, 'use_light_bvh')
+            row = col.row(align=True)
+            row.prop(rpr, 'use_gmon')
 
 class RPR_RENDER_PT_viewport_advanced(RPR_Panel):
     bl_label = "Advanced"
@@ -276,6 +282,10 @@ class RPR_RENDER_PT_viewport_advanced(RPR_Panel):
             col2.enabled = rpr.restir_gi_enabled
             col2.prop(rpr, 'CONTEXT_RESTIR_GI_BIAS_CORRECTION')
             col2.prop(rpr, 'CONTEXT_RESTIR_GI_ENABLE_SAMPLE_VALIDATION')
+
+            col3 = col.column(align=True)
+            col3.prop(rpr, 'use_light_bvh')
+            col3.prop(rpr, 'use_gmon')
 
 class RPR_RENDER_PT_settings(RPR_Panel):
     bl_label = "Settings"
