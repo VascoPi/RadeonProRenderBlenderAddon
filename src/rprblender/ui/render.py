@@ -242,6 +242,40 @@ class RPR_RENDER_PT_advanced(RPR_Panel):
             row = col.row()
             row.prop(rpr, 'texture_compression')
 
+class RPR_RENDER_PT_viewport_advanced(RPR_Panel):
+    bl_label = "Advanced"
+    bl_parent_id = 'RPR_RENDER_PT_viewport_limits'
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        return context.scene.rpr.viewport_render_mode == 'HYBRIDPRO'
+
+    def draw(self, context):
+        self.layout.use_property_split = True
+        self.layout.use_property_decorate = False
+
+        rpr = context.scene.rpr
+        settings = get_user_settings()
+
+        if rpr.viewport_render_mode == 'HYBRIDPRO':
+            col = self.layout.column(align=True)
+            row = col.row(align=True)
+            row.prop(rpr, 'restir_enabled')
+            row = col.row(align=True)
+            row.enabled = rpr.restir_enabled
+            row.prop(rpr, 'restir_mode')
+            col1 = col.column(align=True)
+            col1.enabled = rpr.restir_enabled
+            col1.prop(rpr, 'CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS')
+            col1.prop(rpr, 'CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL')
+
+            col2 = col.column(align=True)
+            col2.prop(rpr, 'restir_gi_enabled')
+            col2 = col.column(align=True)
+            col2.enabled = rpr.restir_gi_enabled
+            col2.prop(rpr, 'CONTEXT_RESTIR_GI_BIAS_CORRECTION')
+            col2.prop(rpr, 'CONTEXT_RESTIR_GI_ENABLE_SAMPLE_VALIDATION')
 
 class RPR_RENDER_PT_settings(RPR_Panel):
     bl_label = "Settings"

@@ -552,6 +552,66 @@ class RPR_RenderProperties(RPR_Properties):
             ('FAST', "Fast", "Fast render quality"),
     ]
 
+    restir_presets = [
+            ('SS', "Screen Space", "ReSTIR Screen Space"),
+            ('PS', "Path Space", "ReSTIR Path Space"),
+    ]
+
+    restir_bias_correction = [
+        ('0', "No bias", "No bias correction (biased)"),
+        ('1', "Uniform weights", "Uniform weights (unbiased, variance can be very high)"),
+        ('2', "Stochastic MIS", "Stochastic MIS (unbiased, variance is very low) [optimal]"),
+        ('3', "Deterministic MIS", "Deterministic MIS (unbiased, variance is even lower) [expensive]"),
+    ]
+
+    restir_mode: EnumProperty(
+        name="Mode",
+        description="RPR viewport render ReSTIR mode",
+        items=restir_presets,
+        default='SS',
+    )
+
+    CONTEXT_RESTIR_GI_BIAS_CORRECTION: EnumProperty(
+        name="CONTEXT_RESTIR_GI_BIAS_CORRECTION",
+        description="CONTEXT_RESTIR_GI_BIAS_CORRECTION",
+        items=restir_bias_correction,
+        default=3,
+    )
+
+    restir_enabled: BoolProperty(
+        name="ReSTIR",
+        description="Enable use ReSTIR",
+        default=False,
+
+    )
+
+    restir_gi_enabled: BoolProperty(
+        name="ReSTIR GI",
+        description="Enable use ReSTIR GI",
+        default=False,
+
+    )
+
+    CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS: IntProperty(
+        name="CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS",
+        description="CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS",
+        min=0,
+        default=3,
+    )
+
+    CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL: IntProperty(
+        name="CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL",
+        description="CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL",
+        min=0,
+        default=128,
+    )
+
+    CONTEXT_RESTIR_GI_ENABLE_SAMPLE_VALIDATION: BoolProperty(
+        name="CONTEXT_RESTIR_GI_ENABLE_SAMPLE_VALIDATION",
+        description="CONTEXT_RESTIR_GI_ENABLE_SAMPLE_VALIDATION",
+        default=False,
+    )
+
     def update_final_render_preset(self, context):
         quality = self.final_render_quality.lower() + '.py'
         mode = self.final_render_mode.lower()

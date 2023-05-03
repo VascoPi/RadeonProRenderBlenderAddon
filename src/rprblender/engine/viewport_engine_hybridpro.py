@@ -49,11 +49,26 @@ class ViewportEngine(viewport_engine.ViewportEngine):
 
     def sync(self, context, depsgraph):
         super().sync(context, depsgraph)
-
         self.rpr_context.set_parameter(pyrpr.CONTEXT_MATERIAL_CACHE, True)
-        self.rpr_context.set_parameter(pyrpr.CONTEXT_RESERVOIR_SAMPLING, 2)
-        self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS, 3)
-        self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL, 128)
+
+        rpr = context.scene.rpr
+
+        if rpr.restir_enabled:
+            if rpr.restir_mode == 'SS':
+                self.rpr_context.set_parameter(pyrpr.CONTEXT_RESERVOIR_SAMPLING, 1)
+                self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS, rpr.CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS)
+                self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL, rpr.CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL)
+
+            elif rpr.restir_mode == 'PS':
+                self.rpr_context.set_parameter(pyrpr.CONTEXT_RESERVOIR_SAMPLING, 2)
+                self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS, rpr.CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS)
+                self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL, rpr.CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL)
+
+
+        if rpr.restir_gi_enabled:
+            self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_GI, rpr.restir_gi_enabled)
+            self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_GI_BIAS_CORRECTION, int(rpr.CONTEXT_RESTIR_GI_BIAS_CORRECTION))
+            self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_GI_ENABLE_SAMPLE_VALIDATION, rpr.CONTEXT_RESTIR_GI_ENABLE_SAMPLE_VALIDATION)
 
         log("Finish sync")
 
