@@ -33,15 +33,24 @@ class RPR_RENDER_PT_devices(RPR_Panel):
         layout.use_property_split = True
         layout.use_property_decorate = False
 
-        if pyrpr.Context.cpu_device:
+        if not pyrpr.Context.gpu_devices and pyrpr.Context.cpu_device:
             col = layout.column(align=True)
             row = col.row()
-            row.enabled = pyrpr.Context.gpu_devices or context.scene.rpr.final_render_mode in ('FULL', 'FULL2')
+            row.enabled = False
             row.prop(devices, 'cpu_state', text=pyrpr.Context.cpu_device['name'])
             col.prop(devices, 'cpu_threads')
 
-        if pyrpr.Context.gpu_devices:
-            layout.separator()
+        else:
+            if pyrpr.Context.cpu_device:
+                col = layout.column(align=True)
+                col.enabled = context.scene.rpr.final_render_mode in ('FULL', 'FULL2')
+
+                col.prop(devices, 'cpu_state', text=pyrpr.Context.cpu_device['name'])
+                row = col.row()
+                row.enabled = devices.cpu_state
+                row.prop(devices, 'cpu_threads')
+
+                layout.separator()
 
             col = layout.column(align=True)
             for i, gpu_device in enumerate(pyrpr.Context.gpu_devices):
@@ -71,15 +80,24 @@ class RPR_RENDER_PT_viewport_devices(RPR_Panel):
         layout.use_property_decorate = False
         self.layout.enabled = settings.separate_viewport_devices
 
-        if pyrpr.Context.cpu_device:
+        if not pyrpr.Context.gpu_devices and pyrpr.Context.cpu_device:
             col = layout.column(align=True)
             row = col.row()
-            row.enabled = pyrpr.Context.gpu_devices or context.scene.rpr.viewport_render_mode in ('FULL', 'FULL2')
+            row.enabled = False
             row.prop(devices, 'cpu_state', text=pyrpr.Context.cpu_device['name'])
             col.prop(devices, 'cpu_threads')
 
-        if pyrpr.Context.gpu_devices:
-            layout.separator()
+        else:
+            if pyrpr.Context.cpu_device:
+                col = layout.column(align=True)
+                col.enabled = context.scene.rpr.viewport_render_mode in ('FULL', 'FULL2')
+
+                col.prop(devices, 'cpu_state', text=pyrpr.Context.cpu_device['name'])
+                row = col.row()
+                row.enabled = devices.cpu_state
+                row.prop(devices, 'cpu_threads')
+
+                layout.separator()
 
             col = layout.column(align=True)
             for i, gpu_device in enumerate(pyrpr.Context.gpu_devices):
