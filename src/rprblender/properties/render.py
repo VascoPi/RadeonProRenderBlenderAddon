@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -196,7 +196,7 @@ class RPR_RenderDevices(bpy.types.PropertyGroup):
                 self.gpu_states[0] = True
         else:
             # if no GPU then cpu always should be enabled
-            self.cpu_state = True
+            self.cpu_state = bool(pyrpr.Context.cpu_device)
         on_settings_changed(self, context)
 
         # after changing devices its good to reset PreviewEngine and
@@ -215,7 +215,7 @@ class RPR_RenderDevices(bpy.types.PropertyGroup):
     cpu_state: BoolProperty(
         name="",
         description="Use CPU device for rendering",
-        default=not pyrpr.Context.gpu_devices,  # True if no GPUs are available
+        default=not pyrpr.Context.gpu_devices and pyrpr.Context.cpu_device is not None,  # True if no GPUs are available
         update=update_states
     )
     cpu_threads: IntProperty(
@@ -502,7 +502,7 @@ class RPR_RenderProperties(RPR_Properties):
 
         settings = get_user_settings()
         settings.final_devices.cpu_state = False
-        
+
     final_render_mode: EnumProperty(
         name="Render Mode",
         description="RPR final render mode",
@@ -558,7 +558,7 @@ class RPR_RenderProperties(RPR_Properties):
         preset_path = str(preset_root_dir() / "final" / mode / quality)
         bpy.ops.script.execute_preset(filepath=preset_path, menu_idname='RPR_RENDER_PT_quality')
         log.debug(f"Apply final render presets, {preset_path}")
-        
+
     final_render_quality: EnumProperty(
         name="Quality",
         description="RPR final render quality preset",
@@ -645,7 +645,7 @@ class RPR_RenderProperties(RPR_Properties):
         # enable CMJ sampler for adaptive sampling
         context_props = [pyrpr.CONTEXT_SAMPLER_TYPE, pyrpr.CONTEXT_SAMPLER_TYPE_CMJ]
 
-        if devices.cpu_state:
+        if devices.cpu_state and isinstance(rpr_context, context.RPRContext2):
             context_flags |= {pyrpr.Context.cpu_device['flag']}
             context_props.extend([pyrpr.CONTEXT_CPU_THREAD_LIMIT, devices.cpu_threads])
 

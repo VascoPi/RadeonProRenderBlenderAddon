@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,7 +33,7 @@ class RPR_RENDER_PT_devices(RPR_Panel):
         layout.use_property_split = True
         layout.use_property_decorate = False
 
-        if not pyrpr.Context.gpu_devices:
+        if not pyrpr.Context.gpu_devices and pyrpr.Context.cpu_device:
             col = layout.column(align=True)
             row = col.row()
             row.enabled = False
@@ -80,7 +80,7 @@ class RPR_RENDER_PT_viewport_devices(RPR_Panel):
         layout.use_property_decorate = False
         self.layout.enabled = settings.separate_viewport_devices
 
-        if not pyrpr.Context.gpu_devices:
+        if not pyrpr.Context.gpu_devices and pyrpr.Context.cpu_device:
             col = layout.column(align=True)
             row = col.row()
             row.enabled = False
@@ -107,7 +107,7 @@ class RPR_RENDER_PT_viewport_devices(RPR_Panel):
 class RPR_RENDER_PT_quality(RPR_Panel):
     bl_label = "Quality"
     bl_context = 'render'
-    
+
     def draw(self, context):
         self.layout.use_property_split = True
         self.layout.use_property_decorate = False
@@ -148,7 +148,7 @@ class RPR_RENDER_PT_limits(RPR_Panel):
         col.prop(limits, 'max_samples')
         row = col.row()
         row.prop(limits, 'noise_threshold', slider=True)
-        
+
         col = self.layout.column(align=True)
         col.enabled = not rpr.is_tile_render_available
         col.prop(limits, 'seconds')
