@@ -31,7 +31,7 @@ from .node_item import NodeItem
 from rprblender.engine.context_hybrid import RPRContext as RPRContextHybrid
 from rprblender.engine.context_hybridpro import RPRContext as RPRContextHybridPro
 from rprblender.engine.context import RPRContext2
-from rprblender.utils import BLENDER_VERSION, get_prop_array_data, is_zero
+from rprblender.utils import BLENDER_VERSION
 
 from rprblender.utils import logging
 log = logging.Log(tag='export.rpr_nodes')
@@ -140,10 +140,9 @@ class ShaderNodeAttribute(NodeParser):
     """ TODO: attribute_type handling, actual attribute type (bool, int, int8) handling"""
 
     def export(self):
-        from rprblender.export.mesh import attribute_key
-        attr_key = attribute_key(self.object, self.node.attribute_name)
-        if attr_key in self.rpr_context.mesh_attribute_names:
-            attr_index = self.rpr_context.mesh_attribute_names[attr_key]
+        from rprblender.export.mesh import get_attribute_index
+        attr_index = get_attribute_index(self.rpr_context, self.object, self.node.uv_map)
+        if attr_index:
             res = self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, {
                 pyrpr.MATERIAL_INPUT_VALUE: attr_index
             })
@@ -2467,16 +2466,14 @@ class ShaderNodeUVMap(NodeParser):
                     pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV
                 })
 
-            if self.node.uv_map in mesh.uv_layers:
-                from rprblender.export.mesh import attribute_key
-                attr_key = attribute_key(self.object, self.node.uv_map)
-                if attr_key in self.rpr_context.mesh_attribute_names:
-                    attr_index = self.rpr_context.mesh_attribute_names[attr_key]
-                    return self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, {
-                        pyrpr.MATERIAL_INPUT_VALUE: attr_index
-                    })
+            from rprblender.export.mesh import get_attribute_index
+            attr_index = get_attribute_index(self.rpr_context, self.object, self.node.uv_map)
+            if attr_index:
+                return self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, {
+                    pyrpr.MATERIAL_INPUT_VALUE: attr_index
+                })
 
-            return None
+        return None
 
 class ShaderNodeVertexColor(NodeParser):
     """
@@ -2491,15 +2488,11 @@ class ShaderNodeVertexColor(NodeParser):
         # The material preview uv_map value is surprisingly empty
 
         if self.object and self.object.type == 'MESH':
-            mesh = self.object.data
-            if self.node.layer_name in mesh.color_attributes:
-                from rprblender.export.mesh import attribute_key
-                attr_key = attribute_key(self.object, self.node.layer_name)
-                if attr_key in self.rpr_context.mesh_attribute_names:
-                    attr_index = self.rpr_context.mesh_attribute_names[attr_key]
-                    return self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, {
-                        pyrpr.MATERIAL_INPUT_VALUE: attr_index
-                    })
+            from rprblender.export.mesh import get_attribute_index
+            attr_index = get_attribute_index(self.rpr_context, self.object, self.node.layer_name)
+            if attr_index:
+                return self.create_node(pyrpr.MATERIAL_NODE_PRIMVAR_LOOKUP, {pyrpr.MATERIAL_INPUT_VALUE: attr_index})
+
         return None
 
 

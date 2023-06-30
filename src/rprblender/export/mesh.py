@@ -33,12 +33,20 @@ log = logging.Log(tag='export.mesh')
 NUM_TRIANGLES_WARNING = 1000000
 
 
+def key(obj):
+    return f"{obj.data.name_full}_{obj.original.type}"
+
+
 def attribute_key(obj, attr_name):
     return f"{key(obj)}_{attr_name}"
 
 
-def key(obj):
-    return f"{obj.data.name_full}_{obj.original.type}"
+def get_attribute_index(rpr_context, obj, attr_name):
+    attr_key = attribute_key(obj, attr_name)
+    if attr_key in rpr_context.mesh_attribute_names:
+        return rpr_context.mesh_attribute_names[attr_key]
+
+    return False
 
 
 @dataclass(init=False)
@@ -52,7 +60,6 @@ class MeshData:
     normal_indices: np.array
     uv_indices: np.array
     num_face_vertices: np.array
-    vertex_colors: np.array = None
     area: float = None
     vertex_attributes: np.array = None
 
