@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+# 
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
+# 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -502,7 +502,7 @@ class RPR_RenderProperties(RPR_Properties):
 
         settings = get_user_settings()
         settings.final_devices.cpu_state = False
-
+        
     final_render_mode: EnumProperty(
         name="Render Mode",
         description="RPR final render mode",
@@ -558,7 +558,7 @@ class RPR_RenderProperties(RPR_Properties):
         preset_path = str(preset_root_dir() / "final" / mode / quality)
         bpy.ops.script.execute_preset(filepath=preset_path, menu_idname='RPR_RENDER_PT_quality')
         log.debug(f"Apply final render presets, {preset_path}")
-
+        
     final_render_quality: EnumProperty(
         name="Quality",
         description="RPR final render quality preset",
