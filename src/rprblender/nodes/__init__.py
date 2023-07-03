@@ -143,34 +143,28 @@ def hide_cycles_and_eevee_poll(method):
 from . import sockets
 from . import rpr_nodes
 
-register_socket_classes, unregister_socket_classes = bpy.utils.register_classes_factory([
-    sockets.RPRSocketColor,
-    sockets.RPRSocketFloat,
-    sockets.RPRSocketWeight,
-    sockets.RPRSocketWeightSoft,
-    sockets.RPRSocketMin1Max1,
-    sockets.RPRSocketLink,
-    sockets.RPRSocketIOR,
-    sockets.RPRSocket_Float_Min0_SoftMax10,
-    sockets.RPRSocketAngle360,
-    sockets.RPRSocketValue,
-])
-
-
-register_socket_interface_classes, unregister_socket_interface_classes = bpy.utils.register_classes_factory([
+register_classes, unregister_classes = bpy.utils.register_classes_factory([
     sockets.RPRSocketColorInterface,
+    sockets.RPRSocketColor,
     sockets.RPRSocketFloatInterface,
+    sockets.RPRSocketFloat,
     sockets.RPRSocketWeightInterface,
+    sockets.RPRSocketWeight,
     sockets.RPRSocketWeightSoftInterface,
+    sockets.RPRSocketWeightSoft,
     sockets.RPRSocketMin1Max1Interface,
+    sockets.RPRSocketMin1Max1,
     sockets.RPRSocketLinkInterface,
+    sockets.RPRSocketLink,
     sockets.RPRSocketIORInterface,
+    sockets.RPRSocketIOR,
     sockets.RPRSocket_Float_Min0_SoftMax10Interface,
+    sockets.RPRSocket_Float_Min0_SoftMax10,
     sockets.RPRSocketAngle360Interface,
+    sockets.RPRSocketAngle360,
     sockets.RPRSocketValueInterface,
-])
+    sockets.RPRSocketValue,
 
-register_node_classes, unregister_node_classes = bpy.utils.register_classes_factory([
     rpr_nodes.RPRShaderNodeUber,
     rpr_nodes.RPRShaderNodeDiffuse,
     rpr_nodes.RPRShaderNodePassthrough,
@@ -201,9 +195,7 @@ def register():
     old_shader_node_category_poll = ShaderNodeCategory.poll
     ShaderNodeCategory.poll = hide_cycles_and_eevee_poll(ShaderNodeCategory.poll)
 
-    register_socket_interface_classes()
-    register_socket_classes()
-    register_node_classes()
+    register_classes()
     register_node_categories("RPR_NODES", node_categories)
 
 
@@ -211,7 +203,4 @@ def unregister():
     if old_shader_node_category_poll and ShaderNodeCategory.poll is not old_shader_node_category_poll:
         ShaderNodeCategory.poll = old_shader_node_category_poll
     unregister_node_categories("RPR_NODES")
-    unregister_node_classes()
-    # it's important to keep this order to avoid Blender crash on M2
-    unregister_socket_interface_classes()
-    unregister_socket_classes()
+    unregister_classes()
