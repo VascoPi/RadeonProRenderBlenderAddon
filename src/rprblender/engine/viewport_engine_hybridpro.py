@@ -51,8 +51,6 @@ class ViewportEngine(viewport_engine.ViewportEngine):
         super().sync(context, depsgraph)
 
         self.rpr_context.set_parameter(pyrpr.CONTEXT_MATERIAL_CACHE, True)
-        self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_GI, True)
-        self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_GI_BIAS_CORRECTION, 3)
         self.rpr_context.set_parameter(pyrpr.CONTEXT_RESERVOIR_SAMPLING, 2)
         self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_SPATIAL_RESAMPLE_ITERATIONS, 3)
         self.rpr_context.set_parameter(pyrpr.CONTEXT_RESTIR_MAX_RESERVOIRS_PER_CELL, 128)
@@ -87,3 +85,16 @@ class ViewportEngine(viewport_engine.ViewportEngine):
                 info += " | Upscaled"
 
         super().notify_status(info, status)
+
+    def _initial_resize(self, depsgraph):
+        if depsgraph.scene.rpr.viewport_upscale:
+            # strange behaviour that Blender sends two additional scene updates
+            # at the first launch Viewport Material Preview Mode during blender session
+            # this cause that draw() called after and render engine starts with initial size (1, 1),
+            # in case of HybridPro it's important due to FSR2 upscaler raise an error if such a small size
+            # workaround is to set values (10, 10) for initial resize if upscaler is turned on values
+            # TODO make a better solution to handle this issue
+            self.rpr_context.resize(10, 10)
+
+        else:
+            super()._initial_resize(depsgraph)

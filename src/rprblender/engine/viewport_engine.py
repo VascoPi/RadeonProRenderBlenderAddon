@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -494,7 +494,7 @@ class ViewportEngine(Engine):
 
         # setting initial render resolution as (1, 1) just for AOVs creation.
         # It'll be resized to correct resolution in draw() function
-        self.rpr_context.resize(1, 1)
+        self._initial_resize(depsgraph)
 
         self.rpr_context.enable_aov(pyrpr.AOV_COLOR)
 
@@ -1146,11 +1146,14 @@ class ViewportEngine(Engine):
             'ml_use_fp16_compute_type': True,
         }
 
+    def _initial_resize(self, depsgraph):
+        self.rpr_context.resize(1, 1)
+
     def depsgraph_objects(self, depsgraph, with_camera=False):
         for obj in super().depsgraph_objects(depsgraph, with_camera):
             if obj.type == 'LIGHT' and not self.shading_data.use_scene_lights:
                 continue
-            
+
             # check for local view visability
             if not obj.visible_in_viewport_get(self.space_data):
                 continue

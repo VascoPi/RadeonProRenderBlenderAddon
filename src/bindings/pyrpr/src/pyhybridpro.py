@@ -261,6 +261,8 @@ class Instance(pyrpr.Instance, Shape):
 @class_ignore_unsupported
 class Scene(pyrpr.Scene):
     def attach(self, obj):
+        if isinstance(obj, HeteroVolume):
+            return
         # if isinstance(obj, HeteroVolume):
         #     return
 

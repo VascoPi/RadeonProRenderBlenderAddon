@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -140,9 +140,12 @@ class ShaderNodeOutputMaterial(BaseNodeParser):
     # inputs: Surface, Volume, Displacement
 
     def get_normal_node(self):
-        """ Returns the normal node if displacement mode is set to bump 
+        """ Returns the normal node if displacement mode is set to bump
             this returns a bumped normal, else returns a node_lookup N """
-        if self.material.cycles.displacement_method in {"BUMP", "BOTH"}:
+
+        # TODO RPRContextHybridPro doesn't support MATERIAL_NODE_BUMP_MAP
+        if self.material.cycles.displacement_method in {"BUMP", "BOTH"} and \
+                not isinstance(self.rpr_context, RPRContextHybridPro):
             displacement_input = self.get_input_link("Displacement")
             if displacement_input:
                 return self.create_node(pyrpr.MATERIAL_NODE_BUMP_MAP, {
@@ -164,7 +167,7 @@ class ShaderNodeOutputMaterial(BaseNodeParser):
             # checking if we have connected node to Volume socket
             volume_rpr_node = material.sync(self.rpr_context, self.material, 'Volume')
             if volume_rpr_node:
-                if isinstance(self.rpr_context, RPRContextHybrid):
+                if isinstance(self.rpr_context, (RPRContextHybrid, RPRContextHybridPro)):
                     return self.create_node(pyrpr.MATERIAL_NODE_UBERV2, {
                         pyrpr.MATERIAL_INPUT_UBER_DIFFUSE_WEIGHT: 0.0,
                         pyrpr.MATERIAL_INPUT_UBER_TRANSPARENCY: (1.0, 1.0, 1.0),
@@ -234,7 +237,7 @@ class ShaderNodeAmbientOcclusion(NodeParser):
 
 class ShaderNodeDisplacement(NodeParser):
     # inputs: Height, Midlevel, Scale, Normal
-    
+
     def export(self):
         height = self.get_input_value('Height')
         midlevel = self.get_input_value('Midlevel')
@@ -255,6 +258,30 @@ class ShaderNodeDisplacement(NodeParser):
 
     def export_hybrid(self):
         return None
+
+    def export_hybridpro(self):
+        height = self.get_input_value('Height')
+        midlevel = self.get_input_value('Midlevel')
+        scale = self.get_input_value('Scale')
+        normal = self.get_input_normal('Normal')
+
+        height = (height - midlevel)
+
+        if isinstance(height.data, (float, tuple)):
+            displacement = self.create_node(pyrpr.MATERIAL_NODE_ARITHMETIC, {
+                pyrpr.MATERIAL_INPUT_OP: pyrpr.MATERIAL_NODE_OP_MUL,
+                pyrpr.MATERIAL_INPUT_COLOR1: height,
+                pyrpr.MATERIAL_INPUT_COLOR0: scale,
+            })
+
+        else:
+            displacement = height * scale
+
+        #  TODO normal is not supported at the moment, produces crash if enable
+        # if normal:
+            # displacement *= normal
+
+        return displacement
 
 
 class NodeReroute(NodeParser):
@@ -381,7 +408,7 @@ class ShaderNodeBsdfGlass(NodeParser):
 
         # disable diffuse
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_DIFFUSE_WEIGHT, 0.0)
-        
+
         # reflection
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_WEIGHT, 1.0)
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_MODE,
@@ -390,7 +417,7 @@ class ShaderNodeBsdfGlass(NodeParser):
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_COLOR, base_color)
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_ROUGHNESS, roughness * roughness)
 
-        # refraction 
+        # refraction
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFRACTION_WEIGHT, 1.0)
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFRACTION_COLOR, base_color)
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFRACTION_ROUGHNESS, roughness * roughness)
@@ -1059,7 +1086,7 @@ class ShaderNodeBsdfHair(NodeParser):
         return rpr_node
 
     def export_hybrid(self):
-        # we'll just use roughness_u and uber for bsdf 
+        # we'll just use roughness_u and uber for bsdf
         component = self.node.component
         color = self.get_input_value('Color')
 
@@ -1341,7 +1368,7 @@ class ShaderNodeTexCoord(RuleNodeParser):
                 pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_P_LOCAL,
             })
         else:
-            log.warn("Ignoring unsupported UV lookup", tex_coord_type, self.node, self.material, 
+            log.warn("Ignoring unsupported UV lookup", tex_coord_type, self.node, self.material,
                      "UV will be used")
             data = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
                 pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV,
@@ -1506,7 +1533,7 @@ class ShaderNodeMath(NodeParser):
                 res = self.create_arithmetic(pyrpr.MATERIAL_NODE_OP_MOD, in1, in2)
             elif op == 'PINGPONG':
                 # Implementation from Blender: source/blender/blenlib/intern/ math_base_inline.c
-                res = (in2 != 0.0).if_else(abs((((in1 - in2) / (in2 * 2.0)) % 1.0) * in2 * 2.0 - in2), 0.0)
+                res = (in2 != 0.0).if_else(abs(((abs((in1 - in2)) / (in2 * 2.0)) % 1.0) * in2 * 2.0 - in2), 0.0)
 
             else:
                 in3 = self.get_input_value(2)
@@ -1888,17 +1915,17 @@ class ShaderNodeMapRange(NodeParser):
     def export(self):
         # TODO add suport for more than just linear mapping
 
-        ''' Get an input value like this.  
+        ''' Get an input value like this.
             This creates rpr "shader nodes" behind the scenes.
         '''
-        from_min = self.get_input_value('From Min')  
+        from_min = self.get_input_value('From Min')
         from_max = self.get_input_value('From Max')
         to_min = self.get_input_value('To Min')
         to_max = self.get_input_value('To Max')
-        
+
         ''' Doing math like this is actually compiled into a 
             shader that is executed at runtime. '''
-        from_range = from_max - from_min  
+        from_range = from_max - from_min
         to_range = to_max - to_min
         value = self.get_input_value('Value')
         if self.node.clamp:  # you can access node values like this
@@ -2150,28 +2177,31 @@ class ShaderNodeMapping(NodeParser):
     def rotation(self, mapping, transpose=False):
         """ returns a vector transformed by rotation """
         # Apply rotation to transpose we flip matrix
-        rotation = - self.get_input_default('Rotation')  # must be flipped to match cycles
-        sin_x, sin_y, sin_z = map(math.sin, rotation.data)
-        cos_x, cos_y, cos_z = map(math.cos, rotation.data)
+        rotation = - self.get_input_value('Rotation')  # must be flipped to match cycles
+
+        rot_sin = rotation.sin()
+        sin_x = rot_sin.get_channel(0)
+        sin_y = rot_sin.get_channel(1)
+        sin_z = rot_sin.get_channel(2)
+
+        rot_cos = rotation.cos()
+        cos_x = rot_cos.get_channel(0)
+        cos_y = rot_cos.get_channel(1)
+        cos_z = rot_cos.get_channel(2)
 
         if transpose:
-            part1 = mapping.dot3((cos_y * cos_z,
-                                  sin_y * sin_x * cos_z - cos_x * sin_z,
-                                  sin_y * cos_x * cos_z + sin_x * sin_z, 0.0))
-            part2 = mapping.dot3((cos_y * sin_z,
-                                  sin_y * sin_x * sin_z + cos_x * cos_z,
-                                  sin_y * cos_x * sin_z - sin_x * cos_z, 0.0))
-            part3 = mapping.dot3((-sin_y,
-                                  cos_y * sin_x,
-                                  cos_y * cos_x, 0.0))
+            part1 = mapping.dot3((cos_y * cos_z).combine(
+                sin_y * sin_x * cos_z - cos_x * sin_z, sin_y * cos_x * cos_z + sin_x * sin_z))
+            part2 = mapping.dot3((cos_y * sin_z).combine(
+                sin_y * sin_x * sin_z + cos_x * cos_z, sin_y * cos_x * sin_z - sin_x * cos_z))
+            part3 = mapping.dot3((-sin_y).combine(cos_y * sin_x, cos_y * cos_x))
         else:
-            part1 = mapping.dot3((cos_y * cos_z, cos_y * sin_z, -sin_y, 0.0))
-            part2 = mapping.dot3((sin_y * sin_x * cos_z - cos_x * sin_z,
-                                  sin_y * sin_x * sin_z + cos_x * cos_z,
-                                  cos_y * sin_x, 0.0))
-            part3 = mapping.dot3((sin_y * cos_x * cos_z + sin_x * sin_z,
-                                  sin_y * cos_x * sin_z - sin_x * cos_z,
-                                  cos_y * cos_x, 0.0))
+            part1 = mapping.dot3((cos_y * cos_z).combine(cos_y * sin_z, -sin_y))
+            part2 = mapping.dot3(
+                (sin_y * sin_x * cos_z - cos_x * sin_z).combine(sin_y * sin_x * sin_z + cos_x * cos_z, cos_y * sin_x))
+            part3 = mapping.dot3(
+                (sin_y * cos_x * cos_z + sin_x * sin_z).combine(sin_y * cos_x * sin_z - sin_x * cos_z, cos_y * cos_x))
+
         return part1.combine4(part2, part3, self.node_item((0, 0, 0, 1)))
 
     def export_281(self):
@@ -2184,7 +2214,7 @@ class ShaderNodeMapping(NodeParser):
 
         location = self.get_input_value('Location')
         scale = self.get_input_value('Scale')
-        
+
         mapping_type = self.node.vector_type
         if mapping_type == 'POINT':
             return self.rotation(mapping * scale) + location
@@ -2492,55 +2522,6 @@ class ShaderNodeVolumePrincipled(NodeParser):
     def export_hybrid(self):
         return None
 
-    def export_hybridpro(self):
-        def volume_export():
-            if not self.object:
-                return None
-
-            density_attr = self.get_input_default('Density Attribute')
-            density_grid_node = volume.create_grid_sampler_node(
-                self.rpr_context, self.object, density_attr.data, 'density')
-
-            if not density_grid_node:
-                if self.object.type == 'VOLUME' or volume.get_smoke_modifier(self.object):
-                    return self.create_node(pyrpr.MATERIAL_NODE_VOLUME, {pyrpr.MATERIAL_INPUT_DENSITY: 0.0})
-
-                return None
-
-            color = self.get_input_value('Color')
-            density = self.get_input_value('Density')
-
-            color *= 0.99   # making color slightly less, because of issue
-                            # that (1, 1, 1) color and higher disables emission
-
-            rpr_node = self.create_node(pyrpr.MATERIAL_NODE_VOLUME, {
-                pyrpr.MATERIAL_INPUT_DENSITY: density,
-                pyrpr.MATERIAL_INPUT_DENSITYGRID: density_grid_node,
-                pyrpr.MATERIAL_INPUT_COLOR: color,
-            })
-
-
-
-            return rpr_node
-
-        def base_export():
-            color = self.get_input_value('Color')
-            density = self.get_input_value('Density')
-
-            rpr_node = self.create_node(pyrpr.MATERIAL_NODE_VOLUME, {
-                pyrpr.MATERIAL_INPUT_COLOR: color,
-                pyrpr.MATERIAL_INPUT_DENSITY: density,
-            })
-
-            return rpr_node
-
-        rpr_node = volume_export()
-
-        if not rpr_node:
-            rpr_node = base_export()
-
-        return rpr_node
-
     def export_rpr2(self):
         def volume_export():
             if not self.object:
@@ -2758,12 +2739,12 @@ class ShaderNodeSeparateHSV(NodeParser):
 class ShaderNodeHueSaturation(NodeParser):
 
     def export(self):
-        # Follows code example for doing RGB transform from 
+        # Follows code example for doing RGB transform from
         # http://beesbuzz.biz/code/16-hsv-color-transforms
 
         color = self.get_input_value('Color')
         fac = self.get_input_value('Fac')
-        hue = self.get_input_value('Hue') - 0.5
+        hue = (self.get_input_value('Hue') - 0.5) * -math.tau
         saturation = self.get_input_value('Saturation')
         value = self.get_input_value('Value')
 

@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,10 +20,10 @@ import bpy
 bl_info = {
     "name": "Radeon ProRender",
     "author": "AMD",
-    "version": (3, 5, 12),
-    "blender": (2, 80, 0),
+    "version": (3, 6, 6),
+    "blender": (2, 93, 0),
     "location": "Info header, render engine menu",
-    "description": "Radeon ProRender rendering plugin for Blender 2.8x",
+    "description": "Radeon ProRender rendering plugin for Blender 2.9x",
     "warning": "",
     "tracker_url": "",
     "wiki_url": "",
@@ -210,7 +210,7 @@ class RPREngine(bpy.types.RenderEngine):
         for index, enabled in enumerate(layer.rpr.enable_aovs):
             if enabled:
                 do_register_pass(aovs[index])
-           
+
         if layer.rpr.crytomatte_aov_material:
             for i in range(3):
                 do_register_pass(cryptomatte_aovs[i])

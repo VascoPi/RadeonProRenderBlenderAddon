@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -111,11 +111,8 @@ def create_grid_sampler_node(rpr_context, obj, grid_name, default_grid_name):
 
             import pyopenvdb as vdb
 
-            # read all grid's metadata to get all grid names
             grids = vdb.readAllGridMetadata(vdb_file)
-
             try:
-                # read grid data
                 grid = next((vdb.read(vdb_file, g.name) for g in grids if g.name == grid_name), None)
 
             except Exception as err:
@@ -128,17 +125,12 @@ def create_grid_sampler_node(rpr_context, obj, grid_name, default_grid_name):
             if grid.valueTypeName != 'float':
                 return
 
-            # get the grid's size
             size = grid.evalLeafDim()
-
-            # create an array of grid size to copy grid values there
             values = np.zeros(shape=size, dtype=np.float32)
 
             # ijk - specifies the index coordinates of the voxel to be copied to array index
             # otherwise grid becomes shifted
             grid.copyToArray(values, ijk=grid.evalLeafBoundingBox()[0])
-
-            # get indices of nonzero values
             indices = np.nonzero(values)
 
             data = {

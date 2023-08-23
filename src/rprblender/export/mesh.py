@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #     http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,6 +32,10 @@ log = logging.Log(tag='export.mesh')
 
 
 NUM_TRIANGLES_WARNING = 1000000
+
+
+def key(obj):
+    return f"{obj.data.name_full}_{obj.original.type}"
 
 
 @dataclass(init=False)
@@ -254,7 +258,7 @@ def assign_materials(rpr_context: RPRContext, rpr_shape: pyrpr.Shape, obj: bpy.t
         mat = material_slots[0].material
 
         smoke_modifier = volume.get_smoke_modifier(obj)
-        if not smoke_modifier or isinstance(rpr_context, (RPRContext2, RPRContextHybridPro)):
+        if not smoke_modifier or isinstance(rpr_context, RPRContext2):
             # setting volume material
             rpr_volume = material.sync(rpr_context, mat, 'Volume', obj=obj)
             rpr_shape.set_volume_material(rpr_volume)
@@ -262,6 +266,11 @@ def assign_materials(rpr_context: RPRContext, rpr_shape: pyrpr.Shape, obj: bpy.t
         # setting displacement material
         if mat.cycles.displacement_method in {'DISPLACEMENT', 'BOTH'}:
             rpr_displacement = material.sync(rpr_context, mat, 'Displacement', obj=obj)
+
+            # HybridPro: displacement disappears in case we set displacement material that is already set
+            if isinstance(rpr_context, RPRContextHybridPro) and rpr_shape.displacement_material is rpr_displacement:
+                return True
+
             rpr_shape.set_displacement_material(rpr_displacement)
             # if no subdivision set that up to 'high' so displacement looks good
             # note subdivision is capped to resolution
@@ -360,7 +369,7 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
     transform = object.get_transform(obj)
 
     # the mesh key is used to find duplicated mesh data
-    mesh_key = obj.data.name
+    mesh_key = key(obj)
     is_potential_instance = len(obj.modifiers) == 0
 
     # if an object has no modifiers it could potentially instance a mesh
@@ -376,15 +385,7 @@ def sync(rpr_context: RPRContext, obj: bpy.types.Object, **kwargs):
 
         deformation_data = rpr_context.deformation_cache.get(obj_key)
 
-        surface_material =False
-        volume_material = False
-
-        if obj.material_slots and obj.material_slots[0].material:
-            surface_material = material.sync(rpr_context, obj.material_slots[0].material, 'Surface', obj=obj)
-            volume_material = material.sync(rpr_context, obj.material_slots[0].material, 'Volume', obj=obj)
-
-        if (smoke_modifier and isinstance(rpr_context, RPRContext2))\
-                or (isinstance(rpr_context, RPRContextHybridPro) and (not isinstance(volume_material, EmptyMaterialNode) and isinstance(surface_material, EmptyMaterialNode))):
+        if smoke_modifier and isinstance(rpr_context, RPRContext2):
             transform = volume.get_transform(obj)
             rpr_shape = rpr_context.create_mesh(
                 obj_key,
@@ -445,7 +446,7 @@ def sync_update(rpr_context: RPRContext, obj: bpy.types.Object, is_updated_geome
     log("sync_update", obj, mesh)
 
     obj_key = object.key(obj)
-    mesh_key = obj.data.name
+    mesh_key = key(obj)
     rpr_shape = rpr_context.objects.get(obj_key, None)
     if rpr_shape:
         if is_updated_geometry:
@@ -460,7 +461,7 @@ def sync_update(rpr_context: RPRContext, obj: bpy.types.Object, is_updated_geome
 
         indirect_only = kwargs.get("indirect_only", False)
         material_override = kwargs.get("material_override", None)
-        
+
         sync_visibility(rpr_context, obj, rpr_shape, indirect_only=indirect_only)
         assign_materials(rpr_context, rpr_shape, obj, material_override)
         return True
