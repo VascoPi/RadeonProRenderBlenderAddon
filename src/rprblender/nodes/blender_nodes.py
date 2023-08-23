@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+# 
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
+# 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -140,7 +140,7 @@ class ShaderNodeOutputMaterial(BaseNodeParser):
     # inputs: Surface, Volume, Displacement
 
     def get_normal_node(self):
-        """ Returns the normal node if displacement mode is set to bump
+        """ Returns the normal node if displacement mode is set to bump 
             this returns a bumped normal, else returns a node_lookup N """
 
         # TODO RPRContextHybridPro doesn't support MATERIAL_NODE_BUMP_MAP
@@ -237,7 +237,7 @@ class ShaderNodeAmbientOcclusion(NodeParser):
 
 class ShaderNodeDisplacement(NodeParser):
     # inputs: Height, Midlevel, Scale, Normal
-
+    
     def export(self):
         height = self.get_input_value('Height')
         midlevel = self.get_input_value('Midlevel')
@@ -408,7 +408,7 @@ class ShaderNodeBsdfGlass(NodeParser):
 
         # disable diffuse
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_DIFFUSE_WEIGHT, 0.0)
-
+        
         # reflection
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_WEIGHT, 1.0)
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_MODE,
@@ -417,7 +417,7 @@ class ShaderNodeBsdfGlass(NodeParser):
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_COLOR, base_color)
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFLECTION_ROUGHNESS, roughness * roughness)
 
-        # refraction
+        # refraction 
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFRACTION_WEIGHT, 1.0)
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFRACTION_COLOR, base_color)
         rpr_node.set_input(pyrpr.MATERIAL_INPUT_UBER_REFRACTION_ROUGHNESS, roughness * roughness)
@@ -1086,7 +1086,7 @@ class ShaderNodeBsdfHair(NodeParser):
         return rpr_node
 
     def export_hybrid(self):
-        # we'll just use roughness_u and uber for bsdf
+        # we'll just use roughness_u and uber for bsdf 
         component = self.node.component
         color = self.get_input_value('Color')
 
@@ -1368,7 +1368,7 @@ class ShaderNodeTexCoord(RuleNodeParser):
                 pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_P_LOCAL,
             })
         else:
-            log.warn("Ignoring unsupported UV lookup", tex_coord_type, self.node, self.material,
+            log.warn("Ignoring unsupported UV lookup", tex_coord_type, self.node, self.material, 
                      "UV will be used")
             data = self.create_node(pyrpr.MATERIAL_NODE_INPUT_LOOKUP, {
                 pyrpr.MATERIAL_INPUT_VALUE: pyrpr.MATERIAL_NODE_LOOKUP_UV,
@@ -1915,17 +1915,17 @@ class ShaderNodeMapRange(NodeParser):
     def export(self):
         # TODO add suport for more than just linear mapping
 
-        ''' Get an input value like this.
+        ''' Get an input value like this.  
             This creates rpr "shader nodes" behind the scenes.
         '''
-        from_min = self.get_input_value('From Min')
+        from_min = self.get_input_value('From Min')  
         from_max = self.get_input_value('From Max')
         to_min = self.get_input_value('To Min')
         to_max = self.get_input_value('To Max')
-
+        
         ''' Doing math like this is actually compiled into a 
             shader that is executed at runtime. '''
-        from_range = from_max - from_min
+        from_range = from_max - from_min  
         to_range = to_max - to_min
         value = self.get_input_value('Value')
         if self.node.clamp:  # you can access node values like this
@@ -2214,7 +2214,7 @@ class ShaderNodeMapping(NodeParser):
 
         location = self.get_input_value('Location')
         scale = self.get_input_value('Scale')
-
+        
         mapping_type = self.node.vector_type
         if mapping_type == 'POINT':
             return self.rotation(mapping * scale) + location
@@ -2739,7 +2739,7 @@ class ShaderNodeSeparateHSV(NodeParser):
 class ShaderNodeHueSaturation(NodeParser):
 
     def export(self):
-        # Follows code example for doing RGB transform from
+        # Follows code example for doing RGB transform from 
         # http://beesbuzz.biz/code/16-hsv-color-transforms
 
         color = self.get_input_value('Color')

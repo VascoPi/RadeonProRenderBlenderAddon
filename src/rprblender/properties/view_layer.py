@@ -3,9 +3,9 @@
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+# 
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
+# 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,7 +47,7 @@ class RPR_ContourProperties(RPR_Properties):
         description="Use Material Index for Contour rendering",
         default=True,
     )
-
+    
     use_shading_normal: BoolProperty(
         name="Use Shading Normal",
         description="Use Shading Normal for Contour rendering",
@@ -66,14 +66,14 @@ class RPR_ContourProperties(RPR_Properties):
         min=1.0, max=10.0,
         default=1.0,
     )
-
+    
     material_id_line_width: FloatProperty(
         name="Line Width Material",
         description="Line width for Material Index contours",
         min=1.0, max=10.0,
         default=1.0,
     )
-
+    
     shading_normal_line_width: FloatProperty(
         name="Line Width Normal",
         description="Line width for Shading Normal contours",
@@ -100,7 +100,7 @@ class RPR_ContourProperties(RPR_Properties):
         min=0.0, soft_max=1.0,
         default=0.05,
     )
-
+    
     use_uv_secondary: BoolProperty(
         name="Use Secondary UV",
         description="Use secondary UV extraction for Contour rendering",
@@ -452,7 +452,7 @@ class RPR_ViewLayerProperites(RPR_Properties):
         'name': "Outline",
         'channel': 'RGBA'
     }
-
+        
 
     def aov_enabled_changed(self, context):
         """ Request update of active render passes for Render Layers compositor input node """
@@ -482,14 +482,14 @@ class RPR_ViewLayerProperites(RPR_Properties):
     # TODO: Probably better to create each aov separately like: aov_depth: BoolProperty(...)
 
     denoiser: PointerProperty(type=RPR_DenoiserProperties)
-
+    
     use_contour_render: BoolProperty(
         name="Contour",
         description="Use Contour rendering mode. Final render only",
         default=False,
         update=aov_enabled_changed,
     )
-    contour: PointerProperty(type=RPR_ContourProperties)
+    contour: PointerProperty(type=RPR_ContourProperties)       
 
     def export_aovs(self, view_layer: bpy.types.ViewLayer, rpr_context, rpr_engine, enable_adaptive, cryptomatte_allowed):
         """
@@ -533,7 +533,7 @@ class RPR_ViewLayerProperites(RPR_Properties):
                     aov = self.cryptomatte_aovs_info[i]
                     rpr_engine.add_pass(aov['name'], len(aov['channel']), aov['channel'], layer=view_layer.name)
                     rpr_context.enable_aov(aov['rpr'])
-
+        
         if self.use_contour_render:
             aov = self.contour_info
             rpr_engine.add_pass(aov['name'], len(aov['channel']), aov['channel'], layer=view_layer.name)
